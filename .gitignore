@@ -1,4 +1,7 @@
 # ignore build files
 *.dSYM
-build/
+cmake-build-debug/
 *.d
+
+# CLion stuff
+# .idea/
