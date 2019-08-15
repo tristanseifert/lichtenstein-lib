@@ -1,17 +1,25 @@
-# pull in protobuf lib
-include(FindProtobuf)
-find_package(Protobuf REQUIRED)
+# create the protobufs lib as an interface
+#add_library(lichtensteinProtobufs)
 
-# specify include directories and generate C++
-include_directories(${PROTOBUF_INCLUDE_DIR})
+# pull in the static protobuf libraries
+add_subdirectory(rt)
+#target_link_libraries(lichtensteinProtobufs INTERFACE lichtensteinProtobufsRt)
 
-# files to add
-protobuf_generate_cpp(PROTO_SRC1 PROTO_HEADER1 Message.proto)
-protobuf_generate_cpp(PROTO_SRC2 PROTO_HEADER2 server/ReqPing.proto server/RespPong.proto)
-protobuf_generate_cpp(PROTO_SRC3 PROTO_HEADER3 rt/ChannelDescriptor.proto rt/JoinChannel.proto rt/JoinChannelAck.proto rt/ChannelData.proto rt/LeaveChannel.proto rt/LeaveChannelAck.proto)
+add_subdirectory(server)
+#target_link_libraries(lichtensteinProtobufs INTERFACE lichtensteinProtobufsServer)
 
-set(PROTO_SRC ${PROTO_SRC1} ${PROTO_SRC2} ${PROTO_SRC3})
-set(PROTO_HEADER ${PROTO_HEADER1} ${PROTO_HEADER2} ${PROTO_HEADER3})
+add_subdirectory(client)
+#target_link_libraries(lichtensteinProtobufs INTERFACE lichtensteinProtobufsClient)
 
-# specify it as a library
-add_library(lichtensteinProtobufs STATIC ${PROTO_HEADER} ${PROTO_SRC})
+add_subdirectory(shared)
+#target_link_libraries(lichtensteinProtobufs INTERFACE lichtensteinProtobufsShared)
+
+# combine all four built libraries
+#add_custom_command(
+#    OUTPUT liblichtensteinProtobufsCombined.a
+#    COMMAND ${CMAKE_CXX_ARCHIVE_CREATE} liblichtensteinProtobufsCombined.a $<TARGET_FILE:lichtensteinProtobufsRt> $<TARGET_FILE:lichtensteinProtobufsServer> $<TARGET_FILE:lichtensteinProtobufsClient> $<TARGET_FILE:lichtensteinProtobufsShared>
+#    DEPENDS lichtensteinProtobufsRt lichtensteinProtobufsServer lichtensteinProtobufsClient lichtensteinProtobufsShared
+#)
+#add_custom_target(lichtensteinProtobufs
+#    DEPENDS libLichtensteinProtobufsCombined.a
+#)

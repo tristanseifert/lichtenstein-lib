@@ -1,0 +1,17 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+import "ChannelDescriptor.proto";
+
+/**
+ * The only message type that can be multicast via the real time protocol, used
+ * to simultaneously output previously sent pixel/framebuffer data on multiple
+ * nodes.
+ *
+ * Note that in this case, the `node` field of the channel descriptor cannot be
+ * NULL.
+ */
+message MulticastOutputReq {
+    // channel/node combinations may be repeated
+    repeated ChannelDescriptor channel = 1;
+}

@@ -7,6 +7,16 @@ package lichtenstein.protocol.rt;
 message ChannelDescriptor {
     // node UUID (can be omitted to indicate "this node")
     bytes nodeUuid = 1;
-    // channel number on that node
-    uint32 channel = 2;
+
+    /*
+     * Either a single channel (specified as a channel number) or a bit string
+     * (where the least significant bit is in the last byte of the string) that
+     * maps to a bitmap of channels on the node.
+     */
+    oneof channel {
+        // channel number on that node
+        uint32 number = 2;
+        // bitstring for channel bit field
+        bytes bitfield = 3;
+    }
 }

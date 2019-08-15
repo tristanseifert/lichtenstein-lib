@@ -1,0 +1,1 @@
+Message types shared between all protocols: this is just the base `Message` type.

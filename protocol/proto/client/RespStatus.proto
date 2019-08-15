@@ -1,0 +1,9 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+/**
+ * Sent as a response to status requests.
+ */
+message RespStatus {
+
+}
