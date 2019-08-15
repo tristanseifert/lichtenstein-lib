@@ -1,0 +1,1 @@
+This directory contains messages used by the real time data service.

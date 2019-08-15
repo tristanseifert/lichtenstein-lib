@@ -1,0 +1,17 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+import "ChannelDescriptor.proto";
+
+/**
+ * Contains pixel data for a particular channel.
+ */
+message ChannelData {
+    // channel that was joined
+    ChannelDescriptor channel = 1;
+
+    // what offset into the channel these bytes belong
+    uint32 offset = 2;
+    // actual pixel data
+    bytes data = 3;
+}

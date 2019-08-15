@@ -1,0 +1,12 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+import "ChannelDescriptor.proto";
+
+/**
+ * Unsubscribes from data updates for a channel.
+ */
+message LeaveChannel {
+    // channel that was joined
+    ChannelDescriptor channel = 1;
+}

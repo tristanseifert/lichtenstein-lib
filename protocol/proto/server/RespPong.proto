@@ -1,0 +1,9 @@
+syntax = "proto3";
+package lichtenstein.protocol.server;
+
+import "ReqPing.proto";
+
+message RespPong {
+    // the ping request that caused this response
+    ReqPing request = 1;
+}

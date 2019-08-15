@@ -1,0 +1,22 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+import "ChannelDescriptor.proto";
+
+/**
+ * Message sent by the server to acknowledge that a channel was joined.
+ */
+message JoinChannelAck {
+    // channel that was joined
+    ChannelDescriptor channel = 1;
+
+    // format of pixel data
+    enum PixelFormat {
+        RGB                 = 0;
+        RGBW                = 1;
+    };
+
+    PixelFormat format = 2;
+    // how many pixels will be returned
+    uint32 numPixels = 3;
+}

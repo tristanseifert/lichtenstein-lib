@@ -1,0 +1,12 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+/**
+ * Describes a single channel.
+ */
+message ChannelDescriptor {
+    // node UUID (can be omitted to indicate "this node")
+    bytes nodeUuid = 1;
+    // channel number on that node
+    uint32 channel = 2;
+}

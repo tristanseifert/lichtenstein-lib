@@ -1,0 +1,9 @@
+syntax = "proto3";
+package lichtenstein.protocol.server;
+
+message ReqPing {
+    // source timestamp
+    int64 timestamp = 1;
+    // ping payload
+    bytes payload = 2;
+}

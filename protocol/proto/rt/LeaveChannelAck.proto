@@ -1,0 +1,19 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+import "ChannelDescriptor.proto";
+
+/**
+ * Acknowledgement from the server that a channel has been left.
+ */
+message LeaveChannelAck {
+    // channel that was left
+    ChannelDescriptor channel = 1;
+
+    // total number of frames output on this channel
+    uint64 totalFrames = 2;
+    // total number of packets sent for this channel
+    uint64 totalPackets = 3;
+    // total number of pixels transmitted for this channel
+    uint64 totalPixels = 4;
+}

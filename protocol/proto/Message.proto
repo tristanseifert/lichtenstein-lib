@@ -1,0 +1,17 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+import "google/protobuf/any.proto";
+
+/**
+ * General Lichtenstein protocol message struct. On the wire, this is precededed
+ * by a 32-bit network order integer specifying the size of this message in
+ * binary format.
+ */
+message Message {
+    // protocol version
+    int32 version = 1;
+
+    // embedded message
+    google.protobuf.Any payload = 2;
+}
