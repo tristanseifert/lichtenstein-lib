@@ -13,7 +13,13 @@ target_link_libraries(liblichtensteintests Catch2::Catch2)
 
 
 ###
-# free standing TLS client
+# free standing DTLS client
 add_executable(dtlsclient dtls_client.cpp)
 target_link_libraries(dtlsclient lichtensteinClient)
 target_link_libraries(dtlsclient glog::glog)
+
+###
+# free standing DTLS server
+add_executable(dtlsserver dtls_server.cpp)
+target_link_libraries(dtlsserver lichtensteinClient)
+target_link_libraries(dtlsserver glog::glog)

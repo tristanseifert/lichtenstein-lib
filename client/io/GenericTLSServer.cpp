@@ -29,6 +29,13 @@ namespace liblichtenstein {
     // delete the context
     SSL_CTX_free(this->ctx);
     this->ctx = nullptr;
+
+    // close our socket
+    if(this->listeningSocket) {
+      // TODO: check errors?
+      close(this->listeningSocket);
+      this->listeningSocket = -1;
+    }
   }
 
 

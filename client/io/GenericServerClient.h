@@ -25,6 +25,7 @@ namespace liblichtenstein {
    */
   class GenericServerClient {
     friend class TLSServer;
+    friend class DTLSServer;
 
     protected:
       GenericServerClient(GenericTLSServer *server, int fd, SSL *ctx,

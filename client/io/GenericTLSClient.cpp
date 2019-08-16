@@ -23,12 +23,6 @@ namespace liblichtenstein {
       this->ssl = nullptr;
     }
 
-    // also deallocate the IO instance
-    if(this->bio) {
-//      BIO_free_all(this->bio);
-      this->bio = nullptr;
-    }
-
     // clean up the SSL context too
     if(this->ctx) {
       SSL_CTX_free(this->ctx);
@@ -56,11 +50,11 @@ namespace liblichtenstein {
     if(err == 0) {
       return this->close();
     }
-      // shutdown completed
+    // shutdown completed
     else if(err == 1) {
       // close socket (fall through)
     }
-      // another type of error :(
+    // another type of error :(
     else if(err < 0) {
       errType = SSL_get_error(this->ssl, err);
 
