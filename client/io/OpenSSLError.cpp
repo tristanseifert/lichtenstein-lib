@@ -4,6 +4,7 @@
 
 #include "OpenSSLError.h"
 
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -12,6 +13,23 @@
 
 
 namespace liblichtenstein {
+  /**
+   * Allocates an OpenSSL error without a description.
+   */
+  OpenSSLError::OpenSSLError() : std::runtime_error("") {
+    OpenSSLError("General OpenSSL error");
+  }
+
+  /**
+   * Allocates an OpenSSL error with a description.
+   *
+   * @param desc Description to store
+   */
+  OpenSSLError::OpenSSLError(std::string desc) : description(desc), std::runtime_error("") {
+    this->sslErrs = OpenSSLError::getSSLErrors();
+    this->whatStr = this->description + " (" + this->sslErrs + ")";
+  }
+
   /**
    * Gets all pending OpenSSL errors into a string.
    *
@@ -32,6 +50,7 @@ namespace liblichtenstein {
     BIO_free(bio);
 
     // done, return our string
+//    std::cerr << str << std::endl;
     return str;
   }
 }

@@ -2,7 +2,7 @@
 // Created by Tristan Seifert on 2019-08-15.
 //
 
-#include "TLSClient.h"
+#include "GenericServerClient.h"
 #include "TLSServer.h"
 #include "OpenSSLError.h"
 
@@ -31,8 +31,8 @@ namespace liblichtenstein {
    * @param _ctx SSL context associated with this socket
    * @param _addr Address from which the client connected
    */
-  TLSClient::TLSClient(GenericTLSServer *_server, int _fd, SSL *_ctx,
-                       struct sockaddr_in _addr) : server(_server), fd(_fd),
+  GenericServerClient::GenericServerClient(GenericTLSServer *_server, int _fd, SSL *_ctx,
+                                           struct sockaddr_in _addr) : server(_server), fd(_fd),
                                                    ctx(_ctx),
                                                    clientAddr(_addr) {
     CHECK_NOTNULL(_server);
@@ -44,7 +44,7 @@ namespace liblichtenstein {
    *
    * This deallocates the SSL context, then closes the socket.
    */
-  TLSClient::~TLSClient() {
+  GenericServerClient::~GenericServerClient() {
     // close and deallocate the session
     if(this->isOpen) {
       this->close();
@@ -66,7 +66,7 @@ namespace liblichtenstein {
    *
    * @note This does not actually deallocate the underlying SSL context.
    */
-  void TLSClient::close() {
+  void GenericServerClient::close() {
     int err, errType;
 
     // mark connection as closed
@@ -102,7 +102,7 @@ namespace liblichtenstein {
    * @return Number of bytes written
    * @throws std::system_error, TLSServer::OpenSSLError
    */
-  size_t TLSClient::write(const std::vector<std::byte> &data) {
+  size_t GenericServerClient::write(const std::vector<std::byte> &data) {
     int err, errType;
 
     // pull out pointers to data
@@ -143,7 +143,7 @@ namespace liblichtenstein {
    * @return How many bytes were actually read
    * @throws std::system_error, TLSServer::OpenSSLError
    */
-  size_t TLSClient::read(std::vector<std::byte> &data, size_t wanted) {
+  size_t GenericServerClient::read(std::vector<std::byte> &data, size_t wanted) {
     int err, errType;
 
     // create a temporary buffer
@@ -182,7 +182,7 @@ namespace liblichtenstein {
    *
    * @return Number of bytes pending
    */
-  size_t TLSClient::pending() const {
+  size_t GenericServerClient::pending() const {
     int err;
 
     // get pending count

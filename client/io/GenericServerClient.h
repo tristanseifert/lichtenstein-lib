@@ -2,8 +2,8 @@
 // Created by Tristan Seifert on 2019-08-15.
 //
 
-#ifndef LIBLICHTENSTEIN_TLSCLIENT_H
-#define LIBLICHTENSTEIN_TLSCLIENT_H
+#ifndef LIBLICHTENSTEIN_GENERICSERVERCLIENT_H
+#define LIBLICHTENSTEIN_GENERICSERVERCLIENT_H
 
 #include <vector>
 #include <cstddef>
@@ -23,18 +23,18 @@ namespace liblichtenstein {
    * `TLSServer` class will create one with the appropriate fields filled in and
    * return it.
    */
-  class TLSClient {
+  class GenericServerClient {
     friend class TLSServer;
 
     protected:
-      TLSClient(GenericTLSServer *server, int fd, SSL *ctx,
-                struct sockaddr_in addr);
+      GenericServerClient(GenericTLSServer *server, int fd, SSL *ctx,
+                          struct sockaddr_in addr);
     public:
-      TLSClient() = delete;
-      virtual ~TLSClient();
+      GenericServerClient() = delete;
+      virtual ~GenericServerClient();
 
     public:
-      [[nodiscard]]bool isSessionOpen() const {
+      [[nodiscard]] bool isSessionOpen() const {
         return this->isOpen;
       }
       void close();
@@ -66,4 +66,4 @@ namespace liblichtenstein {
 }
 
 
-#endif //LIBLICHTENSTEIN_TLSCLIENT_H
+#endif //LIBLICHTENSTEIN_GENERICSERVERCLIENT_H

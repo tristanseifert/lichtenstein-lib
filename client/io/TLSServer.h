@@ -8,7 +8,7 @@
 #include "GenericTLSServer.h"
 
 namespace liblichtenstein {
-  class TLSClient;
+  class GenericServerClient;
 
   /**
    * Provides a basic server that encrypts all communication with TLS, typically
@@ -30,7 +30,7 @@ namespace liblichtenstein {
       virtual ~TLSServer();
 
     public:
-      virtual std::shared_ptr<TLSClient> run();
+      virtual std::shared_ptr<GenericServerClient> run();
 
     private:
       void createContext();

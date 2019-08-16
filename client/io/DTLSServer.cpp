@@ -4,7 +4,7 @@
 
 #include "DTLSServer.h"
 #include "OpenSSLError.h"
-#include "TLSClient.h"
+#include "GenericServerClient.h"
 
 #include <glog/logging.h>
 
@@ -65,7 +65,7 @@ namespace liblichtenstein {
    * @return A reference to a the accepted client
    * @throws std::system_error, TLSServer::OpenSSLError
    */
-  std::shared_ptr<TLSClient> DTLSServer::run() {
+  std::shared_ptr<GenericServerClient> DTLSServer::run() {
     // TODO: implement
   }
 }

@@ -3,7 +3,7 @@
 //
 #include "GenericTLSServer.h"
 #include "OpenSSLError.h"
-#include "TLSClient.h"
+#include "GenericServerClient.h"
 
 #include <exception>
 

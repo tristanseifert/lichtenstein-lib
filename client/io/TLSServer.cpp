@@ -3,7 +3,7 @@
 //
 
 #include "TLSServer.h"
-#include "TLSClient.h"
+#include "GenericServerClient.h"
 #include "OpenSSLError.h"
 
 #include <glog/logging.h>
@@ -72,7 +72,7 @@ namespace liblichtenstein {
    * @return A reference to a the accepted client
    * @throws std::system_error, TLSServer::OpenSSLError
    */
-  std::shared_ptr<TLSClient> TLSServer::run() {
+  std::shared_ptr<GenericServerClient> TLSServer::run() {
     // store the address of the client and prepare an SSL context
     struct sockaddr_in addr;
     socklen_t addrLen = sizeof(addr);
@@ -99,7 +99,7 @@ namespace liblichtenstein {
     }
 
     // the handshake was successful
-    auto *client = new TLSClient(this, clientFd, ssl, addr);
+    auto *client = new GenericServerClient(this, clientFd, ssl, addr);
     return this->clients.emplace_back(client);
   }
 }

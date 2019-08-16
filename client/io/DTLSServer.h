@@ -30,7 +30,7 @@ namespace liblichtenstein {
       virtual ~DTLSServer();
 
     public:
-      virtual std::shared_ptr<TLSClient> run();
+      virtual std::shared_ptr<GenericServerClient> run();
 
     private:
       void createContext();

@@ -14,17 +14,12 @@ namespace liblichtenstein {
    */
   class OpenSSLError : public std::runtime_error {
     public:
-      OpenSSLError() : std::runtime_error("") {
-        this->sslErrs = OpenSSLError::getSSLErrors();
-      }
+      OpenSSLError();
 
-      explicit OpenSSLError(std::string desc) : description(desc), std::runtime_error("") {
-        this->sslErrs = OpenSSLError::getSSLErrors();
-      }
+      explicit OpenSSLError(std::string desc);
 
       virtual const char *what() const noexcept {
-        std::string both = this->description + " (" + this->sslErrs + ")";
-        return both.c_str();
+        return this->whatStr.c_str();
       }
 
     private:
@@ -32,6 +27,9 @@ namespace liblichtenstein {
       std::string sslErrs;
       // optional user-provided description
       std::string description;
+
+      /// full "what()" string
+      std::string whatStr;
 
       static std::string getSSLErrors();
   };
