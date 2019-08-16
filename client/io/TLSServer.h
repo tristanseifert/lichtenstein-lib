@@ -6,11 +6,14 @@
 #define LIBLICHTENSTEIN_TLSSERVER_H
 
 #include <string>
-#include <stdexcept>
+#include <memory>
+#include <vector>
 
 #include <openssl/ssl.h>
 
 namespace liblichtenstein {
+  class TLSClient;
+
   /**
    * Provides a basic server that encrypts all communication with TLS.
    *
@@ -26,16 +29,16 @@ namespace liblichtenstein {
    */
   class TLSServer {
     public:
-      TLSServer(int fd);
+      explicit TLSServer(int fd);
       virtual ~TLSServer();
 
     public:
       void loadCert(std::string certPath, std::string keyPath);
 
-      void run(void);
+      std::shared_ptr<TLSClient> run();
 
     private:
-      void createContext(void);
+      void createContext();
 
     private:
       /// listening socket
@@ -44,33 +47,8 @@ namespace liblichtenstein {
       /// SSL context
       SSL_CTX *ctx = nullptr;
 
-    public:
-      /**
-       * Errors thrown by OpenSSL
-       */
-      class OpenSSLError : public std::runtime_error {
-        public:
-          OpenSSLError() : std::runtime_error("") {
-            this->sslErrs = OpenSSLError::getSSLErrors();
-          }
-
-          OpenSSLError(std::string desc) : description(desc), std::runtime_error("") {
-            this->sslErrs = OpenSSLError::getSSLErrors();
-          }
-
-          virtual const char *what() const noexcept {
-            std::string both = this->description + " (" + this->sslErrs + ")";
-            return both.c_str();
-          }
-
-        private:
-          // OpenSSL errors at time of instantiation
-          std::string sslErrs;
-          // optional user-provided description
-          std::string description;
-
-          static std::string getSSLErrors(void);
-      };
+      /// a list of all clients we've accepted.
+      std::vector<std::shared_ptr<TLSClient>> clients;
   };
 }
 

@@ -1,5 +1,5 @@
 # define the library
-add_library(lichtensteinClient SHARED version.c version.h io/TLSServer.cpp io/TLSServer.h)
+add_library(lichtensteinClient SHARED version.c version.h io/TLSServer.cpp io/TLSServer.h io/TLSClient.cpp io/TLSClient.h io/OpenSSLError.cpp io/OpenSSLError.h)
 
 # link with the protobufs for the lichtenstein wire protocols
 target_link_libraries(lichtensteinClient lichtensteinProto)
