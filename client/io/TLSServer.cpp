@@ -8,6 +8,7 @@
 
 #include <glog/logging.h>
 
+#include <cstring>
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -28,7 +29,7 @@ namespace liblichtenstein {
    * @param fd Socket to listen on; this should already be configured for
    * listening purposes.
    */
-  TLSServer::TLSServer(int fd) : listeningSocket(fd) {
+  TLSServer::TLSServer(int fd) : GenericTLSServer(fd) {
     // set up OpenSSL context
     this->createContext();
   }
@@ -37,21 +38,6 @@ namespace liblichtenstein {
    * Tears down the TLS server. Any existing sessions are closed.
    */
   TLSServer::~TLSServer() {
-    // close all connections
-    for(auto client : this->clients) {
-      if(client->isSessionOpen()) {
-        // swallow any errors
-        try {
-          client->close();
-        } catch(std::exception e) {
-          LOG(ERROR) << "Error closing client " << client << ": " << e.what();
-        }
-      }
-    }
-
-    // delete the context
-    SSL_CTX_free(this->ctx);
-    this->ctx = nullptr;
   }
 
 
@@ -77,26 +63,6 @@ namespace liblichtenstein {
     // configure the context
     SSL_CTX_set_ecdh_auto(this->ctx, 1);
   }
-  /**
-   * Loads a PEM-encoded certificate (and its corresponding private key) into
-   * the OpenSSL context.
-   *
-   * @param certPath Path to PEM-encoded certificate
-   * @param keyPath Path to PEM-encoded private key
-   *
-   * @throws TLSServer::OpenSSLError
-   */
-  void TLSServer::loadCert(std::string certPath, std::string keyPath) {
-    // load certificate
-    if(SSL_CTX_use_certificate_file(ctx, certPath.c_str(), SSL_FILETYPE_PEM) <= 0) {
-      throw OpenSSLError("Could not load certificate");
-    }
-
-    // load private key
-    if(SSL_CTX_use_PrivateKey_file(ctx, keyPath.c_str(), SSL_FILETYPE_PEM) <= 0) {
-      throw OpenSSLError("Could not load private key");
-    }
-  }
 
 
 
@@ -110,6 +76,8 @@ namespace liblichtenstein {
     // store the address of the client and prepare an SSL context
     struct sockaddr_in addr;
     socklen_t addrLen = sizeof(addr);
+
+    memset(&addr, 0, addrLen);
 
     SSL *ssl;
 
@@ -131,7 +99,7 @@ namespace liblichtenstein {
     }
 
     // the handshake was successful
-    TLSClient *client = new TLSClient(clientFd, ssl, addr);
+    auto *client = new TLSClient(this, clientFd, ssl, addr);
     return this->clients.emplace_back(client);
   }
 }

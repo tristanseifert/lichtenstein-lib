@@ -2,17 +2,16 @@
 // Created by Tristan Seifert on 2019-08-15.
 //
 
-#ifndef LIBLICHTENSTEIN_TLSSERVER_H
-#define LIBLICHTENSTEIN_TLSSERVER_H
+#ifndef LIBLICHTENSTEIN_DTLSSERVER_H
+#define LIBLICHTENSTEIN_DTLSSERVER_H
 
 #include "GenericTLSServer.h"
 
 namespace liblichtenstein {
-  class TLSClient;
-
   /**
-   * Provides a basic server that encrypts all communication with TLS, typically
-   * on a TCP socket.
+   * Provides a basic server that encrypts all communication with DTLS, which
+   * typically runs on an UDP socket, but DTLS works with all datagram-style
+   * network protocols.
    *
    * To use, create a server instance with a file descriptor (e.g. a socket)
    * and configure a certificate and corresponding private key.
@@ -24,10 +23,11 @@ namespace liblichtenstein {
    *
    * @note OpenSSL _must_ be initialized before trying to construct this class.
    */
-  class TLSServer : public GenericTLSServer {
+  class DTLSServer : public GenericTLSServer {
     public:
-      explicit TLSServer(int fd);
-      virtual ~TLSServer();
+      explicit DTLSServer(int fd);
+
+      virtual ~DTLSServer();
 
     public:
       virtual std::shared_ptr<TLSClient> run();
@@ -38,4 +38,4 @@ namespace liblichtenstein {
 }
 
 
-#endif //LIBLICHTENSTEIN_TLSSERVER_H
+#endif //LIBLICHTENSTEIN_DTLSSERVER_H

@@ -26,12 +26,17 @@ namespace liblichtenstein {
    * @note This client instance assumes ownership of the socket and SSL context,
    * and will deallocate both when deleted.
    *
+   * @param _server Server to which this client connected
    * @param _fd Socket that the client is bound to
    * @param _ctx SSL context associated with this socket
    * @param _addr Address from which the client connected
    */
-  TLSClient::TLSClient(int _fd, SSL *_ctx, struct sockaddr_in _addr) : fd(_fd), ctx(_ctx), clientAddr(_addr)  {
-
+  TLSClient::TLSClient(GenericTLSServer *_server, int _fd, SSL *_ctx,
+                       struct sockaddr_in _addr) : server(_server), fd(_fd),
+                                                   ctx(_ctx),
+                                                   clientAddr(_addr) {
+    CHECK_NOTNULL(_server);
+    CHECK_NOTNULL(_ctx);
   }
 
   /**
@@ -40,8 +45,6 @@ namespace liblichtenstein {
    * This deallocates the SSL context, then closes the socket.
    */
   TLSClient::~TLSClient() {
-    int err;
-
     // close and deallocate the session
     if(this->isOpen) {
       this->close();
@@ -51,6 +54,9 @@ namespace liblichtenstein {
       SSL_free(this->ctx);
       this->ctx = nullptr;
     }
+
+    // just set the server ptr to null
+    this->server = nullptr;
   }
 
 

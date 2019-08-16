@@ -17,3 +17,9 @@ add_subdirectory(protocol)
 # libLichtenteinClient - Dynamic client protocol handler
 #]]
 add_subdirectory(client)
+
+
+#[[
+# libLichtensteinTests - testing for library (with Catch2)
+#]]
+add_subdirectory(tests)

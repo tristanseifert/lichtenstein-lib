@@ -13,6 +13,8 @@
 #include <openssl/ssl.h>
 
 namespace liblichtenstein {
+  class GenericTLSServer;
+
   /**
    * This object represents a client to a TLSServer. It roughly wraps a socket
    * and SSL context.
@@ -25,13 +27,14 @@ namespace liblichtenstein {
     friend class TLSServer;
 
     protected:
-      TLSClient(int fd, SSL *ctx, struct sockaddr_in addr);
+      TLSClient(GenericTLSServer *server, int fd, SSL *ctx,
+                struct sockaddr_in addr);
     public:
       TLSClient() = delete;
       virtual ~TLSClient();
 
     public:
-      bool isSessionOpen() const {
+      [[nodiscard]]bool isSessionOpen() const {
         return this->isOpen;
       }
       void close();
@@ -39,9 +42,17 @@ namespace liblichtenstein {
       size_t write(const std::vector<std::byte> &data);
 
       size_t read(std::vector<std::byte> &data, size_t wanted);
-      size_t pending() const;
+
+      [[nodiscard]] size_t pending() const;
+
+      [[nodiscard]] GenericTLSServer *getServer() const {
+        return this->server;
+      }
 
     private:
+      /// server associated with this client
+      GenericTLSServer *server = nullptr;
+
       /// file descriptor (socket) that this client is bound to
       int fd = -1;
       /// SSL context used to interact with the client
