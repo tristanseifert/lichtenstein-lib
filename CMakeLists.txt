@@ -16,5 +16,4 @@ add_subdirectory(protocol)
 #[[
 # libLichtenteinClient - Dynamic client protocol handler
 #]]
-add_library(lichtensteinClient SHARED library.cpp library.h)
-target_link_libraries(lichtensteinClient lichtensteinProto)
+add_subdirectory(client)
