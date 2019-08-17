@@ -77,6 +77,21 @@ namespace liblichtenstein {
 
 
   /**
+   * Configures whether the SSL context verifies the peer certificate.
+   *
+   * @param verify Whether verification is enabled or not
+   */
+  void GenericTLSClient::setVerifyPeer(const bool verify) {
+    if (verify) {
+      SSL_CTX_set_verify(this->ctx, SSL_VERIFY_PEER, NULL);
+    } else {
+      SSL_CTX_set_verify(this->ctx, SSL_VERIFY_NONE, NULL);
+    }
+  }
+
+
+
+  /**
    * Writes data to the SSL session.
    *
    * @param data Vector of data to write

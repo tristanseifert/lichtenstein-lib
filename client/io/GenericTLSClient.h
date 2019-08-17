@@ -35,10 +35,10 @@ namespace liblichtenstein {
       }
       void close();
 
+      virtual void setVerifyPeer(const bool verify);
+
       virtual size_t write(const std::vector<std::byte> &data);
-
       virtual size_t read(std::vector<std::byte> &data, size_t wanted);
-
       [[nodiscard]] virtual size_t pending() const;
 
     protected:

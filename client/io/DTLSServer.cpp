@@ -35,7 +35,9 @@ namespace liblichtenstein {
   static unsigned char cookieSecret[cookieSecretLength];
 
   int DTLSGenerateCookieCb(SSL *ssl, unsigned char *cookie, unsigned int *cookieLen);
-  int DTLSVerifyCookieCb(SSL *ssl, unsigned char *cookie, unsigned int cookieLen);
+
+  int DTLSVerifyCookieCb(SSL *ssl, const unsigned char *cookie,
+                         unsigned int cookieLen);
   int DTLSCalculateCookie(SSL *ssl, unsigned char *result, unsigned int *resultLength);
 
   /**
@@ -67,7 +69,7 @@ namespace liblichtenstein {
   void DTLSServer::createContext() {
     // try to create an SSL context
     const SSL_METHOD *method;
-    method = DTLSv1_server_method();
+    method = DTLS_server_method();
 
     this->ctx = SSL_CTX_new(method);
     if (this->ctx == nullptr) {
@@ -259,7 +261,8 @@ namespace liblichtenstein {
    * @param cookieLen Length of cookie, in bytes
    * @return 1 if the cookie was validated successfully, 0 otherwise.
    */
-  int DTLSVerifyCookieCb(SSL *ssl, unsigned char *cookie, unsigned int cookieLen) {
+  int DTLSVerifyCookieCb(SSL *ssl, const unsigned char *cookie,
+                         unsigned int cookieLen) {
     unsigned char result[EVP_MAX_MD_SIZE];
     unsigned int resultLength;
 

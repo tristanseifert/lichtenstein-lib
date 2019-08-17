@@ -25,6 +25,9 @@ void test_dtls(std::string &hostname, int port) {
   // create DTLS instance
   auto *client = new liblichtenstein::TLSClient(hostname, port);
 
+  LOG(WARNING) << "disabled peer verification (for testing purposes)";
+  client->setVerifyPeer(false);
+
   // try to write to it
   LOG(INFO) << "trying to write to TLS connection";
 

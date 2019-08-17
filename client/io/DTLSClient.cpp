@@ -104,7 +104,7 @@ namespace liblichtenstein {
     this->createSocket();
 
     // create the basic context
-    this->ctx = SSL_CTX_new(DTLSv1_client_method());
+    this->ctx = SSL_CTX_new(DTLS_client_method());
     SSL_CTX_set_read_ahead(this->ctx, 1);
 
     // create SSL context
