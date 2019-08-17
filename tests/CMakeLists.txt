@@ -19,7 +19,19 @@ target_link_libraries(dtlsclient lichtensteinClient)
 target_link_libraries(dtlsclient glog::glog)
 
 ###
+# free standing TLS client
+add_executable(tlsclient tls_client.cpp)
+target_link_libraries(tlsclient lichtensteinClient)
+target_link_libraries(tlsclient glog::glog)
+
+###
 # free standing DTLS server
 add_executable(dtlsserver dtls_server.cpp)
 target_link_libraries(dtlsserver lichtensteinClient)
 target_link_libraries(dtlsserver glog::glog)
+
+###
+# free standing TLS server
+add_executable(tlsserver tls_server.cpp)
+target_link_libraries(tlsserver lichtensteinClient)
+target_link_libraries(tlsserver glog::glog)

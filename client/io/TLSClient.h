@@ -2,8 +2,8 @@
 // Created by Tristan Seifert on 2019-08-16.
 //
 
-#ifndef LIBLICHTENSTEIN_DTLSCLIENT_H
-#define LIBLICHTENSTEIN_DTLSCLIENT_H
+#ifndef LIBLICHTENSTEIN_TLSCLIENT_H
+#define LIBLICHTENSTEIN_TLSCLIENT_H
 
 #include "GenericTLSClient.h"
 
@@ -13,17 +13,19 @@
 
 #include <netdb.h>
 
-namespace liblichtenstein {
-  class DTLSClient : public GenericTLSClient {
-    public:
-      DTLSClient(std::string host, int port);
 
-      ~DTLSClient() override;
+namespace liblichtenstein {
+  class TLSClient : public GenericTLSClient {
+    public:
+      TLSClient(std::string host, int port);
+
+      ~TLSClient() override;
 
     private:
       void createContext();
 
       void createSocket();
+
       void connectSocket();
 
     private:
@@ -32,4 +34,5 @@ namespace liblichtenstein {
   };
 }
 
-#endif //LIBLICHTENSTEIN_DTLSCLIENT_H
+
+#endif //LIBLICHTENSTEIN_TLSCLIENT_H

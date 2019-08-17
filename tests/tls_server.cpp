@@ -1,7 +1,7 @@
 //
 // Created by Tristan Seifert on 2019-08-16.
 //
-#include "../client/io/DTLSServer.h"
+#include "../client/io/TLSServer.h"
 #include "../client/io/OpenSSLError.h"
 #include "../client/io/GenericServerClient.h"
 
@@ -19,12 +19,17 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+/**
+ * Writes, then reads some data from a client.
+ *
+ * @param client Client connection
+ */
 static void
 test_client(std::shared_ptr<liblichtenstein::GenericServerClient> &client) {
   int err, read = 0;
 
   // write some data
-  LOG(INFO) << "Trying to write to DTLS client " << client;
+  LOG(INFO) << "Trying to write to TLS client " << client;
 
   std::string send = "Hello, world!";
   std::vector<char> yen(send.begin(), send.end());
@@ -54,7 +59,7 @@ test_client(std::shared_ptr<liblichtenstein::GenericServerClient> &client) {
 
 
 /**
- * Opens a listening DTLS server with the specified certificate and key file.
+ * Opens a listening TLS server with the specified certificate and key file.
  *
  * @param argc
  * @param argv
@@ -79,7 +84,7 @@ int main(int argc, char **argv) {
   OpenSSL_add_ssl_algorithms();
 
   // validate args
-  if(argc != 4) {
+  if (argc != 4) {
     std::cerr << "usage: " << argv[0] << " cert key port" << std::endl;
     return -1;
   }
@@ -91,7 +96,7 @@ int main(int argc, char **argv) {
   LOG(INFO) << "listening on port " << port;
 
   // create listening socket
-  fd = socket(AF_INET, SOCK_DGRAM, 0);
+  fd = socket(AF_INET, SOCK_STREAM, 0);
   PCHECK(fd > 0) << "socket() failed";
 
   servaddr.sin_family = AF_INET;
@@ -101,15 +106,20 @@ int main(int argc, char **argv) {
   err = bind(fd, (const struct sockaddr *) &servaddr, sizeof(servaddr));
   PCHECK(err >= 0) << "bind() failed";
 
-  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void*) &on, (socklen_t) sizeof(on));
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &on,
+             (socklen_t) sizeof(on));
 #if defined(SO_REUSEPORT) && !defined(__linux__)
-  setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const void*) &on, (socklen_t) sizeof(on));
+  setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const void *) &on,
+             (socklen_t) sizeof(on));
 #endif
+
+  err = listen(fd, 5);
+  PCHECK(err == 0) << "listen() failed";
 
   // try it
   try {
     // create the server and load certificate
-    auto *server = new liblichtenstein::DTLSServer(fd);
+    auto *server = new liblichtenstein::TLSServer(fd);
     server->loadCert(certPath, keyPath);
 
     LOG(INFO) << "created server. awaiting connections";
@@ -117,19 +127,20 @@ int main(int argc, char **argv) {
     // try to handle clients
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
-    while(true) {
+    while (true) {
       auto client = server->run();
 
       LOG(INFO) << "got new client: " << client;
       test_client(client);
     }
 #pragma clang diagnostic pop
-  } catch(liblichtenstein::OpenSSLError &e) {
+  } catch (liblichtenstein::OpenSSLError &e) {
     LOG(ERROR) << "OpenSSL error: " << e.what();
-  } catch(std::system_error &e) {
+  } catch (std::system_error &e) {
     LOG(ERROR) << "System error: " << e.what();
   }
 
   // close socket
   close(fd);
 }
+

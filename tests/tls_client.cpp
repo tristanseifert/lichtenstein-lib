@@ -1,7 +1,7 @@
 //
 // Created by Tristan Seifert on 2019-08-16.
 //
-#include "../client/io/DTLSClient.h"
+#include "../client/io/TLSClient.h"
 #include "../client/io/OpenSSLError.h"
 
 #include <iostream>
@@ -14,7 +14,7 @@
 #include <openssl/err.h>
 
 /**
- * Performs DTLS test.
+ * Performs TLS test.
  *
  * @param hostname Host to connect to
  * @param port Port to connect to
@@ -23,10 +23,10 @@ void test_dtls(std::string &hostname, int port) {
   int err;
 
   // create DTLS instance
-  auto *client = new liblichtenstein::DTLSClient(hostname, port);
+  auto *client = new liblichtenstein::TLSClient(hostname, port);
 
   // try to write to it
-  LOG(INFO) << "trying to write to DTLS connection";
+  LOG(INFO) << "trying to write to TLS connection";
 
   std::string send = "Hello, world!";
   std::vector<char> yen(send.begin(), send.end());
@@ -36,7 +36,7 @@ void test_dtls(std::string &hostname, int port) {
   CHECK(err == yen.size()) << "couldn't write all data: " << err;
 
   // next, try to read from it
-  LOG(INFO) << "trying to read from DTLS connection";
+  LOG(INFO) << "trying to read from TLS connection";
   std::vector<std::byte> receive(128);
 
   err = client->read(receive, receive.capacity());
@@ -71,21 +71,21 @@ int main(int argc, char **argv) {
   OpenSSL_add_ssl_algorithms();
 
   // validate args
-  if(argc != 3) {
+  if (argc != 3) {
     std::cerr << "usage: " << argv[0] << " hostname port" << std::endl;
     return -1;
   }
 
   std::string connectTo = std::string(argv[1]);
   int port = std::stoi(std::string(argv[2]));
-  LOG(INFO) << "connecting to " << connectTo << " over UDP";
+  LOG(INFO) << "connecting to " << connectTo << " over TCP";
 
   // try it
   try {
     test_dtls(connectTo, port);
-  } catch(liblichtenstein::OpenSSLError &e) {
+  } catch (liblichtenstein::OpenSSLError &e) {
     LOG(ERROR) << "OpenSSL error: " << e.what();
-  } catch(std::system_error &e) {
+  } catch (std::system_error &e) {
     LOG(ERROR) << "System error: " << e.what();
   }
 }

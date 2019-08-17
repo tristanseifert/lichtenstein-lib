@@ -11,6 +11,8 @@
 #include <vector>
 #include <string>
 
+#include <netdb.h>
+
 namespace liblichtenstein {
   /**
    * This is an abstract class that implements the interface expected of a
@@ -22,7 +24,8 @@ namespace liblichtenstein {
    */
   class GenericTLSClient {
     public:
-      explicit GenericTLSClient(std::string host, int port) : serverHost(host), serverPort(port) {};
+      explicit GenericTLSClient(std::string host, int port) : serverHost(
+              std::move(host)), serverPort(port) {};
 
       virtual ~GenericTLSClient();
 
@@ -32,11 +35,14 @@ namespace liblichtenstein {
       }
       void close();
 
-      virtual size_t write(const std::vector<std::byte> &data) = 0;
+      virtual size_t write(const std::vector<std::byte> &data);
 
-      virtual size_t read(std::vector<std::byte> &data, size_t wanted) = 0;
+      virtual size_t read(std::vector<std::byte> &data, size_t wanted);
 
       [[nodiscard]] virtual size_t pending() const;
+
+    protected:
+      static struct addrinfo *resolveHost(std::string &host, int port);
 
     protected:
       /// whether the connection is "open"
