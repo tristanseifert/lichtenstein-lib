@@ -20,7 +20,7 @@
 #include <openssl/err.h>
 
 static void test_client(std::shared_ptr<liblichtenstein::GenericServerClient> client) {
-  int err;
+  int err, read = 0;
 
   // write some data
   LOG(INFO) << "Trying to write to DTLS client " << client;
@@ -32,6 +32,23 @@ static void test_client(std::shared_ptr<liblichtenstein::GenericServerClient> cl
   err = client->write((std::vector<std::byte> &) yen);
   CHECK(err == yen.size()) << "couldn't write all data: " << err;
   LOG(INFO) << "Wrote " << err << " of " << yen.size() << " bytes";
+
+  // try to read some data
+  std::vector<std::byte> receive(128);
+
+  while (read == 0) {
+    err = client->read(receive, (receive.capacity() - read));
+
+    if (err > 0) {
+      read += err;
+    }
+  }
+
+  LOG(INFO) << "Read " << read << " bytes";
+
+  // close that hoe
+  LOG(INFO) << "closing connection";
+  client->close();
 }
 
 

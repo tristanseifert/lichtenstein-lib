@@ -125,7 +125,9 @@ namespace liblichtenstein {
         this->close();
       } else {
         // it was some other OpenSSL error
-        throw OpenSSLError("SSL_write() failed");
+        throw OpenSSLError(
+                "SSL_write() failed (type " + std::to_string(errType) +
+                ", err " + std::to_string(err) + ")");
       }
     }
 
@@ -162,12 +164,17 @@ namespace liblichtenstein {
       if(errType == SSL_ERROR_SYSCALL) {
         // a syscall failed, so forward that
         throw std::system_error(errno, std::system_category(), "SSL_read() failed");
-      } else if(errType == SSL_ERROR_ZERO_RETURN) {
+      } else if (errType == SSL_ERROR_WANT_READ) {
+        // no data is available on the socket for us to consume
+        return 0;
+      } else if (errType == SSL_ERROR_ZERO_RETURN) {
         // the SSL session has been closed, so tear it down
         this->close();
       } else {
         // it was some other OpenSSL error
-        throw OpenSSLError("SSL_read() failed");
+        throw OpenSSLError(
+                "SSL_write() failed (type " + std::to_string(errType) +
+                ", err " + std::to_string(err) + ")");
       }
     }
 
