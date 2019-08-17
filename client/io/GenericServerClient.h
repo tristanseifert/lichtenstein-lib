@@ -13,58 +13,63 @@
 #include <openssl/ssl.h>
 
 namespace liblichtenstein {
-  class GenericTLSServer;
+  namespace io {
+    class GenericTLSServer;
 
-  /**
-   * This object represents a client to a TLSServer. It roughly wraps a socket
-   * and SSL context.
-   *
-   * You should never create an instance of this class directly. Rather, the
-   * `TLSServer` class will create one with the appropriate fields filled in and
-   * return it.
-   */
-  class GenericServerClient {
-    friend class TLSServer;
-    friend class DTLSServer;
+    /**
+     * This object represents a client to a TLSServer. It roughly wraps a socket
+     * and SSL context.
+     *
+     * You should never create an instance of this class directly. Rather, the
+     * `TLSServer` class will create one with the appropriate fields filled in
+     * and return it.
+     */
+    class GenericServerClient {
+        friend class TLSServer;
 
-    protected:
-      GenericServerClient(GenericTLSServer *server, int fd, SSL *ctx,
-                          struct sockaddr_in addr);
-    public:
-      GenericServerClient() = delete;
-      virtual ~GenericServerClient();
+        friend class DTLSServer;
 
-    public:
-      [[nodiscard]] bool isSessionOpen() const {
-        return this->isOpen;
-      }
-      void close();
+      protected:
+        GenericServerClient(GenericTLSServer *server, int fd, SSL *ctx,
+                            struct sockaddr_in addr);
 
-      size_t write(const std::vector<std::byte> &data);
+      public:
+        GenericServerClient() = delete;
 
-      size_t read(std::vector<std::byte> &data, size_t wanted);
+        virtual ~GenericServerClient();
 
-      [[nodiscard]] size_t pending() const;
+      public:
+        [[nodiscard]] bool isSessionOpen() const {
+          return this->isOpen;
+        }
 
-      [[nodiscard]] GenericTLSServer *getServer() const {
-        return this->server;
-      }
+        void close();
 
-    private:
-      /// server associated with this client
-      GenericTLSServer *server = nullptr;
+        size_t write(const std::vector<std::byte> &data);
 
-      /// file descriptor (socket) that this client is bound to
-      int fd = -1;
-      /// SSL context used to interact with the client
-      SSL *ctx = nullptr;
-      /// address from which the client connected
-      struct sockaddr_in clientAddr;
+        size_t read(std::vector<std::byte> &data, size_t wanted);
 
-      /// whether the client connection is open
-      bool isOpen = true;
-  };
+        [[nodiscard]] size_t pending() const;
+
+        [[nodiscard]] GenericTLSServer *getServer() const {
+          return this->server;
+        }
+
+      private:
+        /// server associated with this client
+        GenericTLSServer *server = nullptr;
+
+        /// file descriptor (socket) that this client is bound to
+        int fd = -1;
+        /// SSL context used to interact with the client
+        SSL *ctx = nullptr;
+        /// address from which the client connected
+        struct sockaddr_in clientAddr;
+
+        /// whether the client connection is open
+        bool isOpen = true;
+    };
+  }
 }
-
 
 #endif //LIBLICHTENSTEIN_GENERICSERVERCLIENT_H

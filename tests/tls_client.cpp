@@ -23,7 +23,7 @@ void test_dtls(std::string &hostname, int port) {
   int err;
 
   // create DTLS instance
-  auto *client = new liblichtenstein::TLSClient(hostname, port);
+  auto *client = new liblichtenstein::io::TLSClient(hostname, port);
 
   LOG(WARNING) << "disabled peer verification (for testing purposes)";
   client->setVerifyPeer(false);
@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
   // try it
   try {
     test_dtls(connectTo, port);
-  } catch (liblichtenstein::OpenSSLError &e) {
+  } catch (liblichtenstein::io::OpenSSLError &e) {
     LOG(ERROR) << "OpenSSL error: " << e.what();
   } catch (std::system_error &e) {
     LOG(ERROR) << "System error: " << e.what();

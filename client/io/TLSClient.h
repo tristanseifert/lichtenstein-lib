@@ -15,23 +15,25 @@
 
 
 namespace liblichtenstein {
-  class TLSClient : public GenericTLSClient {
-    public:
-      TLSClient(std::string host, int port);
+  namespace io {
+    class TLSClient : public GenericTLSClient {
+      public:
+        TLSClient(std::string host, int port);
 
-      ~TLSClient() override;
+        ~TLSClient() override;
 
-    private:
-      void createContext();
+      private:
+        void createContext();
 
-      void createSocket();
+        void createSocket();
 
-      void connectSocket();
+        void connectSocket();
 
-    private:
-      struct addrinfo *servinfo = nullptr;
-      struct addrinfo connectedAddr{};
-  };
+      private:
+        struct addrinfo *servinfo = nullptr;
+        struct addrinfo connectedAddr{};
+    };
+  }
 }
 
 

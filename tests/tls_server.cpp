@@ -25,7 +25,7 @@
  * @param client Client connection
  */
 static void
-test_client(std::shared_ptr<liblichtenstein::GenericServerClient> &client) {
+test_client(std::shared_ptr<liblichtenstein::io::GenericServerClient> &client) {
   int err, read = 0;
 
   // write some data
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
   // try it
   try {
     // create the server and load certificate
-    auto *server = new liblichtenstein::TLSServer(fd);
+    auto *server = new liblichtenstein::io::TLSServer(fd);
     server->loadCert(certPath, keyPath);
 
     LOG(INFO) << "created server. awaiting connections";
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
       test_client(client);
     }
 #pragma clang diagnostic pop
-  } catch (liblichtenstein::OpenSSLError &e) {
+  } catch (liblichtenstein::io::OpenSSLError &e) {
     LOG(ERROR) << "OpenSSL error: " << e.what();
   } catch (std::system_error &e) {
     LOG(ERROR) << "System error: " << e.what();

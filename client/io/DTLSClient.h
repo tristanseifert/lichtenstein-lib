@@ -14,22 +14,25 @@
 #include <netdb.h>
 
 namespace liblichtenstein {
-  class DTLSClient : public GenericTLSClient {
-    public:
-      DTLSClient(std::string host, int port);
+  namespace io {
+    class DTLSClient : public GenericTLSClient {
+      public:
+        DTLSClient(std::string host, int port);
 
-      ~DTLSClient() override;
+        ~DTLSClient() override;
 
-    private:
-      void createContext();
+      private:
+        void createContext();
 
-      void createSocket();
-      void connectSocket();
+        void createSocket();
 
-    private:
-      struct addrinfo *servinfo = nullptr;
-      struct addrinfo connectedAddr{};
-  };
+        void connectSocket();
+
+      private:
+        struct addrinfo *servinfo = nullptr;
+        struct addrinfo connectedAddr{};
+    };
+  }
 }
 
 #endif //LIBLICHTENSTEIN_DTLSCLIENT_H

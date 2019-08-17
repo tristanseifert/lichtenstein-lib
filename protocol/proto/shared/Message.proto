@@ -2,6 +2,7 @@ syntax = "proto3";
 package lichtenstein.protocol;
 
 import "google/protobuf/any.proto";
+import "AuthToken.proto";
 
 /**
  * General Lichtenstein protocol message struct. On the wire, this is precededed
@@ -10,7 +11,9 @@ import "google/protobuf/any.proto";
  */
 message Message {
     // protocol version
-    int32 version = 1;
+    uint32 version = 1;
+    // authentication token
+    AuthToken token = 3;
 
     // embedded message
     google.protobuf.Any payload = 2;

@@ -12,30 +12,32 @@
 #include <openssl/ssl.h>
 
 namespace liblichtenstein {
-  class GenericServerClient;
+  namespace io {
+    class GenericServerClient;
 
-  class GenericTLSServer {
-    public:
-      explicit GenericTLSServer(int fd) : listeningSocket(fd) {};
+    class GenericTLSServer {
+      public:
+        explicit GenericTLSServer(int fd) : listeningSocket(fd) {};
 
-      virtual ~GenericTLSServer();
+        virtual ~GenericTLSServer();
 
-    public:
-      virtual void
-      loadCert(const std::string &certPath, const std::string &keyPath);
+      public:
+        virtual void
+        loadCert(const std::string &certPath, const std::string &keyPath);
 
-      virtual std::shared_ptr<GenericServerClient> run() = 0;
+        virtual std::shared_ptr<GenericServerClient> run() = 0;
 
-    protected:
-      /// listening socket
-      int listeningSocket = -1;
+      protected:
+        /// listening socket
+        int listeningSocket = -1;
 
-      /// SSL context
-      SSL_CTX *ctx = nullptr;
+        /// SSL context
+        SSL_CTX *ctx = nullptr;
 
-      /// a list of all clients we've accepted.
-      std::vector<std::shared_ptr<GenericServerClient>> clients;
-  };
+        /// a list of all clients we've accepted.
+        std::vector<std::shared_ptr<GenericServerClient>> clients;
+    };
+  }
 }
 
 #endif //LIBLICHTENSTEIN_GENERICTLSSERVER_H
