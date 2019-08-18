@@ -10,17 +10,24 @@
 #include "mdns/Service.h"
 
 #if __APPLE__
-
 #include "mdns/AppleService.h"
-
 #else
 #warning "mDNS is not supported on this platform"
 #endif
 
-#include "io/TLSServer.h"
+#include "api/APIHandler.h"
+
+#include "io/OpenSSLError.h"
 #include "io/DTLSClient.h"
 
 
+
+
+/*
+ * The client is implemented as a state machine that runs in its own thread. It
+ * is responsible for initializing and controlling all other parts of the client
+ * which also run as their own threads.
+ */
 namespace liblichtenstein {
   /**
    * Creates a new lichtenstein client.
@@ -28,8 +35,10 @@ namespace liblichtenstein {
    * @param listenIp Address on which the API listens
    * @param apiPort Port the API listens on
    */
-  Client::Client(std::string listenIp, unsigned int apiPort) : apiListenHost(
-          std::move(listenIp)), apiPort(apiPort) {
+  Client::Client(const std::string listenIp, unsigned int apiPort,
+                 const std::string certPath, const std::string certKeyPath)
+          : apiHost(listenIp), apiPort(apiPort), apiCertPath(certPath),
+            apiCertKeyPath(certKeyPath) {
     // create all manner of things
   }
 
@@ -51,16 +60,9 @@ namespace liblichtenstein {
     // we need to make sure that all configuration is valid
     this->checkConfig();
 
-    // start advertising the API
-#if __APPLE__
-    this->clientService = new mdns::AppleService("_licht._tcp.", this->apiPort);
-#endif
-
-    if (this->clientService) {
-      this->clientService->startAdvertising();
-      this->clientService->setTxtRecord("vers", "1.0");
-      this->clientService->setTxtRecord("typ", "client");
-    }
+    // set up the thread for the client state machine
+    this->stateMachineShutdown = false;
+    this->stateMachineThread = new std::thread(&Client::stateMachine, this);
   }
 
   /**
@@ -77,14 +79,19 @@ namespace liblichtenstein {
    * is not broadcast anymore.
    */
   void Client::stop() {
-    // stop broadcasting
-    if (this->clientService) {
-      this->clientService->stopAdvertising();
-    }
+    // shut down the state machine
+    this->setNextState(SHUTDOWN);
 
-    // shut down the realtime protocol and API handlers
-    this->stopRt();
-    this->stopApi();
+    if (this->stateMachineThread) {
+      // wait for  thread to complete (if it hasn't already)
+      if (this->stateMachineThread->joinable()) {
+        this->stateMachineThread->join();
+      }
+
+      // deallocate all of its resources
+      delete this->stateMachineThread;
+      this->stateMachineThread = nullptr;
+    }
   }
 
   /**
@@ -101,22 +108,115 @@ namespace liblichtenstein {
     delete this->rtThread;
   }
 
+
   /**
-   * Terminates the client API server. The TLS server is stopped, any worker
-   * threads used to process requests are killed, until the server thread itself
-   * is stopped.
+   * This implements the "main loop" of the client state machine.
    */
-  void Client::stopApi() {
-    int err;
+  void Client::stateMachine() {
+    // start advertising via mDNS
+    VLOG(1) << "Beginning mDNS advertisement";
 
-    // mark to the API to terminate
-    this->apiShutdown = true;
+#if __APPLE__
+    this->clientService = new mdns::AppleService("_licht._tcp.", this->apiPort);
+#endif
 
-    // close the listening socket and join that thread
-    err = close(this->apiSocket);
-    PLOG_IF(ERROR, err != 0) << "close() on API socket failed";
+    if (this->clientService) {
+      this->clientService->startAdvertising();
+      this->clientService->setTxtRecord("vers", "0.1");
+      this->clientService->setTxtRecord("typ", "client");
+    }
 
-    this->apiThread->join();
-    delete this->apiThread;
+
+    // set up API server thread
+    VLOG(1) << "Setting up API server";
+
+    this->apiHandler = new api::APIHandler(this->apiHost, this->apiPort,
+                                           this->apiCertPath,
+                                           this->apiCertKeyPath);
+
+
+
+    // main state machine
+    while (!this->stateMachineShutdown) {
+      VLOG(2) << "State machine changed to: " << this->stateMachineCurrent;
+
+      switch (this->stateMachineCurrent) {
+        /*
+         * This is the "power on" state of the state machine. The serialized
+         * state is checked to see the adoption status and go from there.
+         */
+        case START: {
+          // for now, just idle
+          this->stateMachineCurrent = IDLE;
+          break;
+        }
+
+          /*
+           * Waits for the condition variable to be signaled; this would be done
+           * when an event happened elsewhere in the code.
+           */
+        case IDLE: {
+          std::unique_lock lock(this->stateMachineCvLock);
+          this->stateMachineCv.wait(lock, [this] {
+            return (this->stateMachineWakeUp == true);
+          });
+
+          // clear the "wake up" flag
+          this->stateMachineWakeUp = false;
+          break;
+        }
+
+          /*
+           * Causes the state machine to start shutting down.
+           */
+        case SHUTDOWN: {
+          // stop advertising the service via mDNS
+          if (this->clientService) {
+            VLOG(2) << "Shutting down mDNS advertisement";
+            this->clientService->stopAdvertising();
+          }
+
+          // ensure the state machine terminates
+          this->stateMachineShutdown = true;
+          break;
+        }
+      }
+    }
+
+    // clean up API server thread
+    VLOG(1) << "Shutting down API";
+    delete this->apiHandler;
+    this->apiHandler = nullptr;
+
+    // clean up realtime connection if it was ever started
+    if (this->rtThread) {
+      VLOG(1) << "Shutting down realtime channel";
+      this->stopRt();
+    }
+
+    VLOG(2) << "State machine is done, bye bye";
+  }
+
+  /**
+   * Sets the next state of the state machine and wakes it up from idle.
+   *
+   * @param next New state
+   */
+  void Client::setNextState(StateMachineState next) {
+    // ensure the state machine is running
+    if (this->stateMachineThread == nullptr) return;
+
+    VLOG(1) << "Requested change to state " << next;
+
+    // take the lock while we modify state
+    {
+      std::unique_lock lock(this->stateMachineCvLock);
+
+      this->stateMachineCurrent = next;
+      this->stateMachineWakeUp = true;
+    }
+
+    // notify state machine
+    this->stateMachineCv.notify_one();
   }
 }

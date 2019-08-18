@@ -10,12 +10,19 @@
 #include <atomic>
 #include <cstdint>
 #include <array>
+#include <mutex>
+#include <condition_variable>
+#include <tuple>
+#include <vector>
+#include "api/APIHandler.h"
+
 
 namespace liblichtenstein {
   namespace io {
     class DTLSClient;
-
     class TLSServer;
+
+    class GenericServerClient;
   }
 
   namespace mdns {
@@ -32,8 +39,16 @@ namespace liblichtenstein {
    * reloaded, or the client can be stopped entirely.
    */
   class Client {
+    private:
+      typedef enum {
+        START,
+        IDLE,
+        SHUTDOWN,
+      } StateMachineState;
+
     public:
-      Client(std::string listenIp, unsigned int apiPort);
+      Client(const std::string listenIp, unsigned int apiPort,
+             const std::string certPath, const std::string certKeyPath);
 
       virtual ~Client();
 
@@ -49,15 +64,28 @@ namespace liblichtenstein {
 
       void stopRt();
 
-      void stopApi();
+    private:
+      void stateMachine();
+
+      void setNextState(StateMachineState next);
 
     private:
       // node UUID
       std::array<uint8_t, 16> nodeUuid{};
 
+    private:
+      // overall client state machine thread
+      std::thread *stateMachineThread = nullptr;
+      // whether the state machine should shut down
+      std::atomic_bool stateMachineShutdown = false;
+
+      StateMachineState stateMachineCurrent = START;
+
+    private:
       // MDNS client used to advertise the client API
       mdns::Service *clientService = nullptr;
 
+    private:
       // worker thread for handling the realtime protocol
       std::thread *rtThread = nullptr;
       // whether the real time client is shutting down
@@ -66,21 +94,26 @@ namespace liblichtenstein {
       // DTLS client to realtime API
       io::DTLSClient *rtClient = nullptr;
 
+      // mutex for condition variable
+      std::mutex stateMachineCvLock;
+      // condition variable
+      std::condition_variable stateMachineCv;
+      // wake up the state machine (can only be written to true by others)
+      std::atomic_bool stateMachineWakeUp = false;
 
-      // worker thread for handling the client API
-      std::thread *apiThread = nullptr;
-      // whether the API is shutting down
-      std::atomic_bool apiShutdown = false;
+    private:
+      // handles all API stuff
+      api::APIHandler *apiHandler = nullptr;
 
-      // hostname/IP on which the API listens
-      std::string apiListenHost;
-      // port on which the API is listening
+      // host the API listens on
+      std::string apiHost;
+      // port the API listens on
       unsigned int apiPort = 0;
 
-      // socket on which we're listening for the API
-      int apiSocket = -1;
-      // TLS server for the client API
-      io::TLSServer *apiServer = nullptr;
+      // path to API certificate
+      std::string apiCertPath;
+      // path to API certificate private key
+      std::string apiCertKeyPath;
   };
 }
 

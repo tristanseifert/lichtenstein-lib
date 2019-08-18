@@ -2,7 +2,7 @@ find_package(LibreSSL REQUIRED)
 find_package(glog REQUIRED)
 
 # define the library
-add_library(lichtensteinClient SHARED version.c version.h io/TLSServer.cpp io/TLSServer.h io/GenericServerClient.cpp io/GenericServerClient.h io/OpenSSLError.cpp io/OpenSSLError.h io/DTLSServer.cpp io/DTLSServer.h io/GenericTLSServer.h io/GenericTLSServer.cpp io/GenericTLSClient.cpp io/GenericTLSClient.h io/DTLSClient.cpp io/DTLSClient.h io/TLSClient.cpp io/TLSClient.h Client.cpp Client.h mdns/Service.h)
+add_library(lichtensteinClient SHARED version.c version.h io/TLSServer.cpp io/TLSServer.h io/GenericServerClient.cpp io/GenericServerClient.h io/OpenSSLError.cpp io/OpenSSLError.h io/DTLSServer.cpp io/DTLSServer.h io/GenericTLSServer.h io/GenericTLSServer.cpp io/GenericTLSClient.cpp io/GenericTLSClient.h io/DTLSClient.cpp io/DTLSClient.h io/TLSClient.cpp io/TLSClient.h Client.cpp Client.h mdns/Service.h api/APIHandler.cpp api/APIHandler.h io/SSLSessionClosedError.h)
 
 # compile platform specific stuff into small shared libraries
 if (APPLE)

@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
   OpenSSL_add_ssl_algorithms();
 
   // validate args
-  if (argc != 3) {
-    std::cerr << "usage: " << argv[0] << " listenIp port" << std::endl;
+  if (argc != 5) {
+    std::cerr << "usage: " << argv[0] << " listenIp port cert key" << std::endl;
     return -1;
   }
 
@@ -45,9 +45,14 @@ int main(int argc, char **argv) {
   int apiPort = std::stoi(std::string(argv[2]));
   LOG(INFO) << "API will run on  " << listenIp << ':' << apiPort << " over TCP";
 
+  std::string certPath = std::string(argv[3]);
+  std::string keyPath = std::string(argv[4]);
+
+
   // try it
   try {
-    auto *client = new liblichtenstein::Client(listenIp, apiPort);
+    auto *client = new liblichtenstein::Client(listenIp, apiPort, certPath,
+                                               keyPath);
 
     client->start();
 
