@@ -11,6 +11,11 @@ find_package(Catch2 REQUIRED)
 target_link_libraries(liblichtensteintests Catch2::Catch2)
 
 
+###
+# client implementation test
+add_executable(client client_test.cpp)
+target_link_libraries(client lichtensteinClient)
+target_link_libraries(client glog::glog)
 
 ###
 # free standing DTLS client
