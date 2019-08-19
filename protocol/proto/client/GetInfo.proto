@@ -1,0 +1,14 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+/**
+ * Returns basic information about the node.
+ */
+message GetInfo {
+    /// do we want to get performance information (load, memory, fps, etc.)?
+    bool wantsPerformanceInfo = 1;
+    /// do we want adoption info?
+    bool wantsAdoptionInfo = 2;
+    /// do we want general node information?
+    bool wantsNodeInfo = 3;
+}

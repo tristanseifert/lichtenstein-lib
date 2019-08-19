@@ -3,6 +3,7 @@
 //
 #include "../client/io/TLSClient.h"
 #include "../client/io/OpenSSLError.h"
+#include "../client/api/MessageSerializer.h"
 
 #include <iostream>
 #include <system_error>
@@ -12,6 +13,33 @@
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#include "client/GetInfo.pb.h"
+
+
+/**
+ * Writes a client "get info" message to the client.
+ */
+void write_node_info_req(liblichtenstein::io::TLSClient *client) {
+  int err;
+
+  std::vector<std::byte> dataToSend;
+
+  // serialize the request message into a packet
+  lichtenstein::protocol::client::GetInfo info;
+
+  info.set_wantsperformanceinfo(true);
+  info.set_wantsadoptioninfo(true);
+  info.set_wantsnodeinfo(true);
+
+  liblichtenstein::api::MessageSerializer::serialize(dataToSend, info);
+
+  // send it
+  LOG(INFO) << "Sending message of " << dataToSend.size() << " bytes";
+
+  err = client->write(dataToSend);
+  CHECK(err == dataToSend.size()) << "couldn't write all data: " << err;
+}
 
 /**
  * Performs TLS test.
@@ -28,19 +56,22 @@ void test_dtls(std::string &hostname, int port) {
   LOG(WARNING) << "disabled peer verification (for testing purposes)";
   client->setVerifyPeer(false);
 
-  // try to write to it
-  LOG(INFO) << "trying to write to TLS connection";
+//  // try to write to it
+//  LOG(INFO) << "trying to write to TLS connection";
+//
+//  std::string send = "Hello, world!";
+//  std::vector<char> yen(send.begin(), send.end());
+//  yen.push_back(0x00);
+//
+//  err = client->write((std::vector<std::byte> &) yen);
+//  CHECK(err == yen.size()) << "couldn't write all data: " << err;
 
-  std::string send = "Hello, world!";
-  std::vector<char> yen(send.begin(), send.end());
-  yen.push_back(0x00);
-
-  err = client->write((std::vector<std::byte> &) yen);
-  CHECK(err == yen.size()) << "couldn't write all data: " << err;
+// write a status message
+  write_node_info_req(client);
 
   // next, try to read from it
   LOG(INFO) << "trying to read from TLS connection";
-  std::vector<std::byte> receive(128);
+  std::vector<std::byte> receive(1024);
 
   err = client->read(receive, receive.capacity());
   LOG(INFO) << "received " << err << " bytes";

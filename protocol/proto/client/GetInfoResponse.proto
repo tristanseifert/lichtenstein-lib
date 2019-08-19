@@ -1,0 +1,20 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+import "NodeInfo.proto";
+import "AdoptionStatus.proto";
+import "PerformanceInfo.proto";
+
+/**
+ * Response to the "Get Info" command.
+ */
+message GetInfoResponse {
+    // general node info
+    NodeInfo node = 1;
+
+    // adoption status
+    AdoptionStatus adoption = 2;
+
+    // performance information
+    PerformanceInfo performance = 3;
+}

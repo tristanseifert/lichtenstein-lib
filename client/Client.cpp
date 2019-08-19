@@ -15,7 +15,7 @@
 #warning "mDNS is not supported on this platform"
 #endif
 
-#include "api/APIHandler.h"
+#include "api/API.h"
 
 #include "io/OpenSSLError.h"
 #include "io/DTLSClient.h"
@@ -83,7 +83,7 @@ namespace liblichtenstein {
     this->setNextState(SHUTDOWN);
 
     if (this->stateMachineThread) {
-      // wait for  thread to complete (if it hasn't already)
+      // wait for thread to complete (if it hasn't already)
       if (this->stateMachineThread->joinable()) {
         this->stateMachineThread->join();
       }
@@ -130,9 +130,9 @@ namespace liblichtenstein {
     // set up API server thread
     VLOG(1) << "Setting up API server";
 
-    this->apiHandler = new api::APIHandler(this->apiHost, this->apiPort,
-                                           this->apiCertPath,
-                                           this->apiCertKeyPath);
+    this->apiHandler = new api::API(this->apiHost, this->apiPort,
+                                    this->apiCertPath,
+                                    this->apiCertKeyPath);
 
 
 

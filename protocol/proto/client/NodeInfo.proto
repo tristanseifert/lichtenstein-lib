@@ -1,0 +1,18 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+/**
+ * Provides generic information about the node.
+ */
+message NodeInfo {
+    // node hostname
+    string hostname = 1;
+
+    // os info
+    string os = 2;
+    // hw info
+    string hardware = 3;
+
+    // lichtenstein client software info
+    string client = 4;
+}

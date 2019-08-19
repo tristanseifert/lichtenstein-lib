@@ -28,6 +28,7 @@ target_link_libraries(dtlsclient glog::glog)
 # free standing TLS client
 add_executable(tlsclient tls_client.cpp)
 include_directories(BEFORE SYSTEM /usr/local/opt/libressl/include)
+include_directories(${CMAKE_BINARY_DIR}/protocol/proto)
 target_link_libraries(tlsclient lichtensteinClient)
 target_link_libraries(tlsclient glog::glog)
 

@@ -1,0 +1,10 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+/**
+ * Describes the adoption status of this node.
+ */
+message AdoptionStatus {
+    // is this node adopted?
+    bool isAdopted = 1;
+}

@@ -14,7 +14,7 @@
 #include <condition_variable>
 #include <tuple>
 #include <vector>
-#include "api/APIHandler.h"
+#include "api/API.h"
 
 
 namespace liblichtenstein {
@@ -103,7 +103,7 @@ namespace liblichtenstein {
 
     private:
       // handles all API stuff
-      api::APIHandler *apiHandler = nullptr;
+      api::API *apiHandler = nullptr;
 
       // host the API listens on
       std::string apiHost;

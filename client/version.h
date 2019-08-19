@@ -10,4 +10,9 @@
  */
 unsigned int lichtenstein_client_get_version(void);
 
+// Global version strings
+extern const char *gVERSION;
+extern const char *gVERSION_SHORT;
+extern const char *gVERSION_HASH;
+
 #endif //LIBLICHTENSTEIN_VERSION_H

@@ -2,7 +2,7 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 
 # define the library
-add_library(lichtensteinProto STATIC version.c version.h)
+add_library(lichtensteinProto STATIC version.c version.h WireMessage.h)
 
 # link against the protobuf library
 target_link_libraries(lichtensteinProto ${PROTOBUF_LIBRARY})
