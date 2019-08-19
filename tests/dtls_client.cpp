@@ -1,8 +1,8 @@
 //
 // Created by Tristan Seifert on 2019-08-16.
 //
-#include "../client/io/DTLSClient.h"
-#include "../client/io/OpenSSLError.h"
+#include "../io/DTLSClient.h"
+#include "../io/OpenSSLError.h"
 
 #include <iostream>
 #include <system_error>

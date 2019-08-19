@@ -19,6 +19,11 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 add_subdirectory(protocol)
 
 #[[
+# libLichtensteinIo - Static library with IO helpers
+#]]
+add_subdirectory(io)
+
+#[[
 # libLichtenteinClient - Dynamic client protocol handler
 #]]
 add_subdirectory(client)

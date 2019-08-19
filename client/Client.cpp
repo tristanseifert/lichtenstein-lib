@@ -7,13 +7,7 @@
 
 #include <utility>
 
-#include "mdns/Service.h"
-
-#if __APPLE__
-#include "mdns/AppleService.h"
-#else
-#warning "mDNS is not supported on this platform"
-#endif
+#include "io/mdns/Service.h"
 
 #include "api/API.h"
 
@@ -116,11 +110,9 @@ namespace liblichtenstein {
     // start advertising via mDNS
     VLOG(1) << "Beginning mDNS advertisement";
 
-#if __APPLE__
-    this->clientService = new mdns::AppleService("_licht._tcp.", this->apiPort);
-#endif
+    this->clientService = mdns::Service::create("_licht._tcp.", this->apiPort);
 
-    if (this->clientService) {
+    if(this->clientService) {
       this->clientService->startAdvertising();
       this->clientService->setTxtRecord("vers", "0.1");
       this->clientService->setTxtRecord("typ", "client");

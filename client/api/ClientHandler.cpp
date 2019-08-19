@@ -6,6 +6,7 @@
 #include "ClientHandler.h"
 #include "ProtocolError.h"
 #include "MessageSerializer.h"
+#include "HandlerFactory.h"
 
 #include <glog/logging.h>
 
@@ -16,48 +17,20 @@
 #include <unordered_map>
 #include <functional>
 
-#include <unistd.h>
-#include <sys/utsname.h>
-
-#include "../io/OpenSSLError.h"
-#include "../io/SSLSessionClosedError.h"
-#include "../io/TLSServer.h"
-#include "../io/GenericServerClient.h"
+#include "io/OpenSSLError.h"
+#include "io/SSLSessionClosedError.h"
+#include "io/TLSServer.h"
+#include "io/GenericServerClient.h"
 
 #include "protocol/WireMessage.h"
 #include "protocol/version.h"
 #include "shared/Message.pb.h"
-
-#include "client/GetInfo.pb.h"
-#include "client/GetInfoResponse.pb.h"
-#include "client/NodeInfo.pb.h"
-#include "client/AdoptionStatus.pb.h"
-#include "client/PerformanceInfo.pb.h"
-
-
-using lichtenstein::protocol::client::GetInfo;
-using lichtenstein::protocol::client::GetInfoResponse;
-using lichtenstein::protocol::client::NodeInfo;
-using lichtenstein::protocol::client::AdoptionStatus;
-using lichtenstein::protocol::client::PerformanceInfo;
 
 // idk
 extern "C" unsigned int lichtenstein_protocol_get_version(void);
 
 
 namespace liblichtenstein::api {
-  /**
-   * A map of type URLs to callback functions.
-   *
-   * Each callback function must be a member of ClientHandler. Its signature
-   * accepts a single argument, the received message.
-   */
-  const std::unordered_map<std::string, std::function<void(
-          liblichtenstein::api::ClientHandler &,
-          const lichtenstein::protocol::Message &)>> handlers = {
-          {"type.googleapis.com/lichtenstein.protocol.client.GetInfo", &ClientHandler::getInfo}
-  };
-
   /**
    * Sets up a new thread to handle this client.
    *
@@ -228,17 +201,24 @@ namespace liblichtenstein::api {
    */
   void
   ClientHandler::processMessage(lichtenstein::protocol::Message &received) {
-    // get the type
+    // get the type and try to allocate a handler
     std::string type = received.payload().type_url();
 //    LOG(INFO) << "Payload type URL: " << type;
 
-    // do we have a handler?
-    if(handlers.count(type)) {
-      // if so, invoke it
-      auto function = handlers.find(type)->second;
-      function(*this, received);
-    } else {
-      LOG(WARNING) << "No handler for type " << type;
+    auto handler = HandlerFactory::create(type, this->api, this);
+
+    // invoke handler function
+    if(handler) {
+      handler->handle(received);
+    }
+      // otherwise, treat this as an error and close connection
+    else {
+      std::stringstream error;
+
+      HandlerFactory::dump();
+
+      error << "Received unknown message of type " << type;
+      throw ProtocolError(error.str().c_str());
     }
   }
 
@@ -265,102 +245,6 @@ namespace liblichtenstein::api {
 
     // done, I guess
     VLOG(1) << "Sent response: " << response.DebugString();
-  }
-
-
-  /**
-   * Handles a "get info" request.
-   *
-   * @param received Received request
-   */
-  void ClientHandler::getInfo(const lichtenstein::protocol::Message &received) {
-    // unpack message
-    GetInfo getInfo;
-    received.payload().UnpackTo(&getInfo);
-
-    LOG(INFO) << "Get info: " << getInfo.DebugString();
-
-    // craft response message
-    GetInfoResponse response;
-
-    // shall it include node info?
-    if(getInfo.wantsnodeinfo()) {
-      response.set_allocated_node(this->makeNodeInfo());
-    }
-
-    // shall it include adoption info?
-    if(getInfo.wantsadoptioninfo()) {
-      response.set_allocated_adoption(this->makeAdoptionStatus());
-    }
-
-    // shall it include performance info?
-    if(getInfo.wantsperformanceinfo()) {
-      response.set_allocated_performance(this->makePerformanceInfo());
-    }
-
-    // send it
-    this->sendResponse(response);
-  }
-
-  /**
-   * Gets node information into an allocated message.
-   *
-   * @return Allocated node info
-   */
-  NodeInfo *ClientHandler::makeNodeInfo() {
-    int err;
-
-    // create the node info message
-    auto *node = new NodeInfo();
-
-    // get hostname
-    char hostname[256]{};
-    err = gethostname(hostname, sizeof(hostname));
-    PCHECK(err == 0) << "gethostname() failed";
-
-    node->set_hostname(std::string(hostname));
-
-    // get all the OS info via uname
-    struct utsname sysnames{};
-    err = uname(&sysnames);
-    PCHECK(err == 0) << "uname() failed";
-
-    std::string os = std::string(sysnames.sysname) + " " +
-                     std::string(sysnames.release) + " " +
-                     std::string(sysnames.version);
-    node->set_os(os);
-
-    node->set_hardware(std::string(sysnames.machine));
-
-    // write the client version
-    std::string client =
-            "libLichtensteinClient " + std::string(gVERSION) + "(" +
-            std::string(gVERSION_HASH) + ")";
-    node->set_client(client);
-
-    return node;
-  }
-
-  /**
-   * Gets performance information into an allocated message.
-   *
-   * @return Allocated performance info
-   */
-  PerformanceInfo *ClientHandler::makePerformanceInfo() {
-    auto *performance = new PerformanceInfo();
-
-    return performance;
-  }
-
-  /**
-   * Gets adoption status into an allocated message.
-   *
-   * @return Allocated adoption status
-   */
-  AdoptionStatus *ClientHandler::makeAdoptionStatus() {
-    auto *adoption = new AdoptionStatus();
-
-    return adoption;
   }
 
 

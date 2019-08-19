@@ -1,8 +1,8 @@
 //
 // Created by Tristan Seifert on 2019-08-16.
 //
-#include "../client/io/TLSClient.h"
-#include "../client/io/OpenSSLError.h"
+#include "../io/TLSClient.h"
+#include "../io/OpenSSLError.h"
 #include "../client/api/MessageSerializer.h"
 
 #include <iostream>

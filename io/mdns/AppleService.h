@@ -12,7 +12,7 @@
 #include <string>
 #include <map>
 
-namespace liblichtenstein::mdns {
+namespace liblichtenstein::mdns::platform {
   /**
    * A concrete implementation of an mDNS service for Apple platforms. This
    * uses the dnssd/mDNSResponder API.

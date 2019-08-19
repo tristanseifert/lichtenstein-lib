@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <utility>
+#include <memory>
 
 namespace liblichtenstein::mdns {
   /**
@@ -14,8 +15,8 @@ namespace liblichtenstein::mdns {
    * convenient helpers for setting name, any additional attributes (via the
    * TXT records) and controlling advertisement.
    *
-   * @note This is an abstract base class. You should create a platform-
-   * specific concrete instance instead.
+   * @note This is an abstract base class. Use the create() method to get a
+   * platform-specific instance.
    */
   class Service {
     public:
@@ -25,6 +26,10 @@ namespace liblichtenstein::mdns {
                                                              port) {}
 
       virtual ~Service() = default;
+
+    public:
+      static std::unique_ptr<Service>
+      create(std::string name, unsigned int port);
 
     public:
       virtual void startAdvertising() = 0;

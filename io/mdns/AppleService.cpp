@@ -13,7 +13,7 @@
 #include <dns_sd.h>
 
 
-namespace liblichtenstein::mdns {
+namespace liblichtenstein::mdns::platform {
   /**
    * Initializes an mDNS service advertised via dnssd.
    *

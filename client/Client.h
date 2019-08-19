@@ -14,7 +14,7 @@
 #include <condition_variable>
 #include <tuple>
 #include <vector>
-#include "api/API.h"
+#include <memory>
 
 
 namespace liblichtenstein {
@@ -23,6 +23,10 @@ namespace liblichtenstein {
     class TLSServer;
 
     class GenericServerClient;
+  }
+
+  namespace api {
+    class API;
   }
 
   namespace mdns {
@@ -83,7 +87,7 @@ namespace liblichtenstein {
 
     private:
       // MDNS client used to advertise the client API
-      mdns::Service *clientService = nullptr;
+      std::unique_ptr<mdns::Service> clientService;
 
     private:
       // worker thread for handling the realtime protocol

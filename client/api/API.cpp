@@ -13,10 +13,10 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
-#include "../io/OpenSSLError.h"
-#include "../io/SSLSessionClosedError.h"
-#include "../io/TLSServer.h"
-#include "../io/GenericServerClient.h"
+#include "io/OpenSSLError.h"
+#include "io/SSLSessionClosedError.h"
+#include "io/TLSServer.h"
+#include "io/GenericServerClient.h"
 
 
 namespace liblichtenstein::api {

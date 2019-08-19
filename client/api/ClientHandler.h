@@ -46,17 +46,9 @@ namespace liblichtenstein::api {
 
       void processMessage(lichtenstein::protocol::Message &received);
 
-      void sendResponse(google::protobuf::Message &response);
-
     public:
-      void getInfo(const lichtenstein::protocol::Message &received);
-
-    private:
-      lichtenstein::protocol::client::NodeInfo *makeNodeInfo();
-
-      lichtenstein::protocol::client::PerformanceInfo *makePerformanceInfo();
-
-      lichtenstein::protocol::client::AdoptionStatus *makeAdoptionStatus();
+      /// sends a response to the client (used by handlers)
+      void sendResponse(google::protobuf::Message &response);
 
     private:
       // API that this client connected to

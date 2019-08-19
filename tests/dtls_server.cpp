@@ -1,9 +1,9 @@
 //
 // Created by Tristan Seifert on 2019-08-16.
 //
-#include "../client/io/DTLSServer.h"
-#include "../client/io/OpenSSLError.h"
-#include "../client/io/GenericServerClient.h"
+#include "../io/DTLSServer.h"
+#include "../io/OpenSSLError.h"
+#include "../io/GenericServerClient.h"
 
 #include <glog/logging.h>
 
