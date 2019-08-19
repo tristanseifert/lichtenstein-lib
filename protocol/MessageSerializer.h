@@ -7,7 +7,10 @@
 
 #include <cstddef>
 #include <vector>
-#include <google/protobuf/message.h>
+
+namespace google::protobuf {
+  class Message;
+}
 
 namespace lichtenstein::protocol {
   class Message;

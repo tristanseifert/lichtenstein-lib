@@ -5,7 +5,6 @@
 
 #include "ClientHandler.h"
 #include "ProtocolError.h"
-#include "MessageSerializer.h"
 #include "HandlerFactory.h"
 
 #include <glog/logging.h>
@@ -14,7 +13,6 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>
-#include <unordered_map>
 #include <functional>
 
 #include "io/OpenSSLError.h"
@@ -22,6 +20,7 @@
 #include "io/TLSServer.h"
 #include "io/GenericServerClient.h"
 
+#include "protocol/MessageSerializer.h"
 #include "protocol/WireMessage.h"
 #include "protocol/version.h"
 #include "shared/Message.pb.h"

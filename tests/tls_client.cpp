@@ -3,7 +3,7 @@
 //
 #include "../io/TLSClient.h"
 #include "../io/OpenSSLError.h"
-#include "../client/api/MessageSerializer.h"
+#include "../protocol/MessageSerializer.h"
 
 #include <iostream>
 #include <system_error>

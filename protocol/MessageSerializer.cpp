@@ -5,8 +5,6 @@
 #include "MessageSerializer.h"
 #include "SerializationError.h"
 
-#include <glog/logging.h>
-
 #include <string>
 #include <algorithm>
 
@@ -14,11 +12,11 @@
 
 #include <arpa/inet.h>
 
-#include "protocol/WireMessage.h"
-#include "protocol/version.h"
+#include "WireMessage.h"
+#include "version.h"
 
-#include "shared/Message.pb.h"
-#include "shared/AuthToken.pb.h"
+#include "proto/shared/Message.pb.h"
+#include "proto/shared/AuthToken.pb.h"
 
 
 namespace liblichtenstein::api {
