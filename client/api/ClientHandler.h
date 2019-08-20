@@ -5,6 +5,8 @@
 #ifndef LIBLICHTENSTEIN_CLIENTHANDLER_H
 #define LIBLICHTENSTEIN_CLIENTHANDLER_H
 
+#include "protocol/GenericClientHandler.h"
+
 #include <atomic>
 #include <thread>
 #include <memory>
@@ -30,31 +32,20 @@ namespace liblichtenstein::io {
 namespace liblichtenstein::api {
   class API;
 
-  class ClientHandler {
+  class ClientHandler : public GenericClientHandler {
     public:
       ClientHandler(API *api, std::shared_ptr<io::GenericServerClient> client);
 
-      virtual ~ClientHandler();
+      ~ClientHandler() override;
 
     private:
       void handle();
 
-      void readMessage();
-
-      void decodeMessage(lichtenstein::protocol::Message &outMessage,
-                         std::vector<std::byte> &buffer);
-
       void processMessage(lichtenstein::protocol::Message &received);
-
-    public:
-      /// sends a response to the client (used by handlers)
-      void sendResponse(google::protobuf::Message &response);
 
     private:
       // API that this client connected to
       API *api = nullptr;
-      // client connection
-      std::shared_ptr<io::GenericServerClient> client;
 
       // worker thread
       std::thread *thread = nullptr;

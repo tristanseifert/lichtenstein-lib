@@ -1,7 +1,12 @@
 # ignore build files
 *.dSYM
-cmake-build-debug/
 *.d
 
+cmake-build-*/
+
 # CLion stuff
-# .idea/
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf

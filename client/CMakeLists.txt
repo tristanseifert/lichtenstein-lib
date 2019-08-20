@@ -15,7 +15,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.cpp.in
 set(version_file "${CMAKE_CURRENT_BINARY_DIR}/version.cpp")
 
 # define the library
-add_library(lichtensteinClient SHARED ${version_file} version.c version.h Client.cpp Client.h api/API.cpp api/API.h api/ClientHandler.cpp api/ClientHandler.h api/ProtocolError.h api/IRequestHandler.h api/handlers/GetInfoReq.cpp api/handlers/GetInfoReq.h api/HandlerFactory.cpp api/HandlerFactory.h)
+add_library(lichtensteinClient SHARED ${version_file} version.c version.h Client.cpp Client.h api/API.cpp api/API.h api/ClientHandler.cpp api/ClientHandler.h api/IRequestHandler.h api/handlers/GetInfoReq.cpp api/handlers/GetInfoReq.h api/HandlerFactory.cpp api/HandlerFactory.h)
 
 # link with the protobufs and IO libs
 target_link_libraries(lichtensteinClient lichtensteinProto lichtensteinIo)
