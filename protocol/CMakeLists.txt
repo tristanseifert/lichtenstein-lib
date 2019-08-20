@@ -10,9 +10,14 @@ include_directories(${PROTOBUF_INCLUDE_DIR})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-# link as well to LibreSSL (for generic client handler)
-find_package(LibreSSL REQUIRED)
-target_link_libraries(lichtensteinProto LibreSSL::TLS)
+# link with LibreSSL
+if (APPLE)
+    # a kind of nasty hack for macOS, otherwise it will link with system OpenSSL :(
+    include_directories(BEFORE SYSTEM /usr/local/opt/libressl/include)
+    target_link_libraries(lichtensteinProto /usr/local/opt/libressl/lib/libcrypto.dylib /usr/local/opt/libressl/lib/libssl.dylib /usr/local/opt/libressl/lib/libtls.dylib)
+else ()
+    target_link_libraries(lichtensteinProto LibreSSL::TLS)
+endif ()
 
 
 # pull in compiled protobufs
