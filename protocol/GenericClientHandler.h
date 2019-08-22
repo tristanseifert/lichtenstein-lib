@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <functional>
+#include <atomic>
 
 namespace google::protobuf {
   class Message;
@@ -40,6 +41,11 @@ namespace liblichtenstein::api {
       /// sends a response to the client (used by handlers)
       void sendResponse(google::protobuf::Message &response);
 
+      /// shuts down the client
+      virtual void close() {
+        this->shutdown = true;
+      }
+
     protected:
       void readMessage(const std::function<void(protoMessageType &)> &success);
 
@@ -49,6 +55,9 @@ namespace liblichtenstein::api {
     protected:
       // client connection
       std::shared_ptr<clientType> client;
+
+      // whether the client has been shut down
+      std::atomic_bool shutdown = false;
   };
 }
 
