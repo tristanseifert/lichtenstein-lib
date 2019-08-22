@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
+# enable address and ub sanitizer
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=undefined,address,integer")
+set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=undefined,address,integer")
+
 #[[
 # libLichtensteinProto - Static protocol library
 #]]

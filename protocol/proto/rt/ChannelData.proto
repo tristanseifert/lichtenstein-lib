@@ -7,8 +7,20 @@ import "ChannelDescriptor.proto";
  * Contains pixel data for a particular channel.
  */
 message ChannelData {
+    // a random "transaction" value that is used in the acknowledgement
+    fixed32 transaction = 5;
+
     // channel that was joined
     ChannelDescriptor channel = 1;
+
+    // pixel format types
+    enum PixelFormat {
+        RGB = 0;
+        RGBW = 1;
+    }
+
+    // format of the actual pixel data
+    PixelFormat format = 4;
 
     // what offset into the channel these bytes belong
     uint32 offset = 2;

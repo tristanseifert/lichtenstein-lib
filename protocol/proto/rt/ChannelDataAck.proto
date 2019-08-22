@@ -1,0 +1,16 @@
+syntax = "proto3";
+package lichtenstein.protocol.rt;
+
+import "ChannelDescriptor.proto";
+
+/**
+ * Transmitted by clients in response to a ChannelData frame. This is used as an
+ * information to the server as to whether the data has arrived and been
+ * processed by the node.
+ */
+message ChannelDataAck {
+    // transaction value from a previous ChannelData message
+    fixed32 transaction = 1;
+    // channel on which this transaction occurred
+    ChannelDescriptor channel = 2;
+}
