@@ -2,6 +2,7 @@
 // Created by Tristan Seifert on 2019-08-17.
 //
 #include "Client.h"
+#include "IClientDataStore.h"
 
 #include <glog/logging.h>
 
@@ -64,7 +65,15 @@ namespace liblichtenstein {
    * services can be started.
    */
   void Client::checkConfig() {
+    // UUID must not be nil
+    if(this->nodeUuid.is_nil()) {
+      throw std::invalid_argument("Node UUID may not be nil");
+    }
 
+    // we should have a data store
+    if(this->dataStore == nullptr) {
+      throw std::invalid_argument("No data store configured");
+    }
   }
 
 
@@ -110,12 +119,15 @@ namespace liblichtenstein {
     // start advertising via mDNS
     VLOG(1) << "Beginning mDNS advertisement";
 
-    this->clientService = mdns::Service::create("_licht._tcp.", this->apiPort);
+    this->clientService = mdns::Service::create("_licht._tcp.,_client-api-v1",
+                                                this->apiPort);
 
     if(this->clientService) {
       this->clientService->startAdvertising();
-      this->clientService->setTxtRecord("vers", "0.1");
-      this->clientService->setTxtRecord("typ", "client");
+      this->clientService->setTxtRecord("version", "0.1");
+      this->clientService->setTxtRecord("type", "client");
+      this->clientService->setTxtRecord("uuid",
+                                        uuids::to_string(this->nodeUuid));
     }
 
 
@@ -138,8 +150,15 @@ namespace liblichtenstein {
          * state is checked to see the adoption status and go from there.
          */
         case START: {
-          // for now, just idle
-          this->stateMachineCurrent = IDLE;
+          // are we adopted (per our data store)
+          if(this->dataStore->get("isAdopted") == "1") {
+            // we have been adopted, so verify it
+            this->stateMachineCurrent = VERIFY_ADOPT;
+          } else {
+            // we are not; go idle and wait for adoption
+            LOG(INFO) << "Node is not adopted; waiting for adoption";
+            this->stateMachineCurrent = IDLE;
+          }
           break;
         }
 
@@ -170,6 +189,22 @@ namespace liblichtenstein {
 
           // ensure the state machine terminates
           this->stateMachineShutdown = true;
+          break;
+        }
+
+          /**
+           * Verify the stored adoption information. This attempts to connect to
+           * the server (whose address we have stored), then requests the state of
+           * this adoption.
+           *
+           * If this step is successful, we establish a connection to the realtime
+           * data service, and have an already authenticated server API connection
+           *
+           * On failure, we wait a random amount of time (with exponential
+           * increase) and try to verify the adoption again.
+           */
+        case VERIFY_ADOPT: {
+          // TODO: implement
           break;
         }
       }

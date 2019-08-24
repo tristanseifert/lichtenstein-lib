@@ -1,7 +1,8 @@
 //
 // Created by Tristan Seifert on 2019-08-17.
 //
-#include "../client/Client.h"
+#include "../../client/Client.h"
+#include "BasicFileDataStore.h"
 
 #include <glog/logging.h>
 
@@ -55,6 +56,14 @@ int main(int argc, char **argv) {
     auto *client = new liblichtenstein::Client(listenIp, apiPort, certPath,
                                                keyPath);
 
+    // configure client
+    client->setNodeUuid(uuids::uuid::from_string(
+            "dd4bdb85-2cbf-42e3-8607-f041ed484c7e").value());
+
+    // load config
+    client->setDataStore(std::make_shared<BasicFileDataStore>("store.dat"));
+
+    // then, start client
     client->start();
 
     // wait for signal (such as Ctrl+C)

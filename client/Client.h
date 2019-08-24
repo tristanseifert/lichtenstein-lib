@@ -16,8 +16,12 @@
 #include <vector>
 #include <memory>
 
+#include <uuid.h>
+
 
 namespace liblichtenstein {
+  class IClientDataStore;
+
   namespace io {
     class DTLSClient;
     class TLSServer;
@@ -48,6 +52,8 @@ namespace liblichtenstein {
         START,
         IDLE,
         SHUTDOWN,
+
+        VERIFY_ADOPT,
       } StateMachineState;
 
     public:
@@ -63,6 +69,19 @@ namespace liblichtenstein {
 
       void reload();
 
+    public:
+      void setNodeUuid(const uuids::uuid &newNodeUuid) {
+        this->nodeUuid = newNodeUuid;
+      }
+
+      void setNodeUuid(const std::array<uint8_t, 16> &newNodeUuidBytes) {
+        this->nodeUuid = uuids::uuid(newNodeUuidBytes);
+      }
+
+      void setDataStore(std::shared_ptr<IClientDataStore> store) {
+        this->dataStore = store;
+      }
+
     private:
       void checkConfig();
 
@@ -75,7 +94,7 @@ namespace liblichtenstein {
 
     private:
       // node UUID
-      std::array<uint8_t, 16> nodeUuid{};
+      uuids::uuid nodeUuid;
 
     private:
       // overall client state machine thread
@@ -118,6 +137,10 @@ namespace liblichtenstein {
       std::string apiCertPath;
       // path to API certificate private key
       std::string apiCertKeyPath;
+
+    private:
+      // data store containing our internal state
+      std::shared_ptr<IClientDataStore> dataStore;
   };
 }
 
