@@ -1,12 +1,12 @@
 find_package(LibreSSL REQUIRED)
 
 # define static library
-add_library(lichtensteinIo STATIC TLSServer.cpp TLSServer.h GenericServerClient.cpp GenericServerClient.h OpenSSLError.cpp OpenSSLError.h DTLSServer.cpp DTLSServer.h GenericTLSServer.h GenericTLSServer.cpp GenericTLSClient.cpp GenericTLSClient.h DTLSClient.cpp DTLSClient.h TLSClient.cpp TLSClient.h SSLSessionClosedError.h mdns/Service.h mdns/Service.cpp)
+add_library(lichtensteinIo STATIC TLSServer.cpp TLSServer.h GenericServerClient.cpp GenericServerClient.h OpenSSLError.cpp OpenSSLError.h DTLSServer.cpp DTLSServer.h GenericTLSServer.h GenericTLSServer.cpp GenericTLSClient.cpp GenericTLSClient.h DTLSClient.cpp DTLSClient.h TLSClient.cpp TLSClient.h SSLSessionClosedError.h mdns/Service.h mdns/Service.cpp mdns/Browser.cpp mdns/Browser.h mdns/IBrowserService.h)
 
 
 # compile mDNS stuff for various platforms
 if (APPLE)
-    add_library(lichtensteinIoApple OBJECT mdns/AppleService.cpp mdns/AppleService.h)
+    add_library(lichtensteinIoApple OBJECT mdns/AppleService.cpp mdns/AppleService.h mdns/AppleBrowser.cpp mdns/AppleBrowser.h mdns/AppleBrowserService.cpp mdns/AppleBrowserService.h)
     target_link_libraries(lichtensteinIoApple glog::glog)
 
     target_link_libraries(lichtensteinIo lichtensteinIoApple)

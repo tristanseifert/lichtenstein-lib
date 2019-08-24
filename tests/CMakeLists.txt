@@ -43,3 +43,9 @@ add_executable(tlsserver tls_server.cpp)
 include_directories(BEFORE SYSTEM /usr/local/opt/libressl/include)
 target_link_libraries(tlsserver lichtensteinClient)
 target_link_libraries(tlsserver glog::glog)
+
+###
+# mDNS browser
+add_executable(mdnsbrowser BrowserTest.cpp)
+target_link_libraries(mdnsbrowser lichtensteinIo)
+target_link_libraries(mdnsbrowser glog::glog)
