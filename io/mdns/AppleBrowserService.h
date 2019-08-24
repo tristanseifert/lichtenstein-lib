@@ -27,6 +27,8 @@ namespace liblichtenstein::mdns::platform {
     public:
       AppleBrowserService() = delete;
 
+      ~AppleBrowserService();
+
     private:
       AppleBrowserService(int interface, const std::string &name,
                           const std::string &type, const std::string &domain);
@@ -87,6 +89,23 @@ namespace liblichtenstein::mdns::platform {
         return this->target;
       }
 
+      /**
+       * Gets all TXT records for this service.
+       *
+       * @param outRecords Vecctor to add the records to
+       */
+      void getTxtRecords(TxtRecordsType &outRecords) override;
+
+      /**
+       * Gets the interface on which the service was discovered.
+       *
+       * @return Interface on which this service was discovered on, if available
+       */
+      [[nodiscard]] std::optional<std::string>
+      getInterfaceName() const override {
+        return this->interfaceName;
+      }
+
     private:
       void processTxtRecord(const unsigned char *data, size_t len);
 
@@ -100,6 +119,9 @@ namespace liblichtenstein::mdns::platform {
                                   void *context);
 
     private:
+      // are we being deallocated?
+      std::atomic_bool shutdown = false;
+
       // service name
       std::string name;
       // service type
@@ -110,12 +132,14 @@ namespace liblichtenstein::mdns::platform {
       std::optional<std::string> target;
       // port on which the service runs
       std::optional<int> port;
+      // interface name of the interface on which we discovered this
+      std::optional<std::string> interfaceName;
 
       // interface index on which the service was discovered
       int interface;
 
       // service ref
-      DNSServiceRef svc;
+      DNSServiceRef svc = nullptr;
 
       // whether the resolution process is done
       std::atomic_bool resolveDone = false;
@@ -124,6 +148,11 @@ namespace liblichtenstein::mdns::platform {
       // lock used to protect access to the condition
       std::mutex resolveLock;
 
+      // error during resolving
+      DNSServiceErrorType resolveError;
+
+      // lock for TXT records
+      std::mutex txtLock;
       // storage for TXT records
       TxtRecordsType txtRecords;
   };

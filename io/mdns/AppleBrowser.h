@@ -41,11 +41,14 @@ namespace liblichtenstein::mdns::platform {
 
 
     private:
+      // are we being deallocated?
+      std::atomic_bool shutdown = false;
+
       // service name to browse for
       std::string serviceName;
 
       // browser service
-      DNSServiceRef svc;
+      DNSServiceRef svc = nullptr;
 
       // whether the browsing process is done
       std::atomic_bool browseDone = false;
@@ -53,6 +56,9 @@ namespace liblichtenstein::mdns::platform {
       std::condition_variable browseCv;
       // lock used to protect access to the condition
       std::mutex browseLock;
+
+      // error during browsing
+      DNSServiceErrorType browseError;
 
       // lock protecting access to service list
       std::mutex serviceListLock;

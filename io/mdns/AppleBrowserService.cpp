@@ -9,6 +9,8 @@
 #include <chrono>
 #include <stdexcept>
 
+#include <net/if.h>
+
 
 namespace liblichtenstein::mdns::platform {
   /**
@@ -24,8 +26,24 @@ namespace liblichtenstein::mdns::platform {
                                            const std::string &type,
                                            const std::string &domain) : name(
           name), type(type), domain(domain), interface(interface) {
-    VLOG(1) << "New service: " << name << "(type " << type << "), domain "
-            << domain << " on interface " << interface;
+//    VLOG(1) << "New service: " << name << "(type " << type << "), domain "
+//            << domain << " on interface " << interface;
+  }
+
+  /**
+   * Cleans up the associated DNS service reference if it still exists.
+   */
+  AppleBrowserService::~AppleBrowserService() {
+    // notify any functions that are still waiting
+    this->resolveDone = false;
+    this->shutdown = true;
+    this->resolveCv.notify_all();
+
+    // delete the DNS service ref
+    if(this->svc) {
+      DNSServiceRefDeallocate(this->svc);
+      this->svc = nullptr;
+    }
   }
 
   /**
@@ -40,7 +58,9 @@ namespace liblichtenstein::mdns::platform {
     // reset some state
     {
       std::lock_guard lock(this->resolveLock);
+
       this->resolveDone = false;
+      this->resolveError = kDNSServiceErr_NoError;
     }
 
     this->port.reset();
@@ -75,17 +95,37 @@ namespace liblichtenstein::mdns::platform {
     std::unique_lock<std::mutex> lk(this->resolveLock);
 
     if(this->resolveCv.wait_for(lk, timeout, [this] {
-      return (this->resolveDone == true);
+      return (this->resolveDone) || (this->shutdown) ||
+             (this->resolveError != kDNSServiceErr_NoError);
     })) {
+      // figure out what happened
+      if(this->resolveDone) {
+        // resolving completed, yay
+      } else if(this->shutdown) {
+        // we're being deallocated so return immediately
+        return;
+      } else if(this->resolveError != kDNSServiceErr_NoError) {
+        // an error occurred while resolving; deallocate service and throw
+        if(this->svc) {
+          DNSServiceRefDeallocate(this->svc);
+          this->svc = nullptr;
+        }
 
+        std::stringstream error;
+        error << "Error while resolving: " << err;
+
+        throw std::runtime_error(error.str());
+      }
     } else {
       throw std::runtime_error("Resolution timed out");
     }
 //    std::this_thread::sleep_until(std::chrono::system_clock::now() + timeout);
 
     // clean up here
-    DNSServiceRefDeallocate(this->svc);
-    this->svc = nullptr;
+    if(this->svc) {
+      DNSServiceRefDeallocate(this->svc);
+      this->svc = nullptr;
+    }
   }
 
   /**
@@ -118,7 +158,9 @@ namespace liblichtenstein::mdns::platform {
     if(errorCode != kDNSServiceErr_NoError) {
       LOG(ERROR) << "Error resolving service: " << errorCode;
 
-      // TODO: forward this to browse function
+      // forward this to resolve function
+      service->resolveError = errorCode;
+      service->resolveCv.notify_all();
 
       return;
     }
@@ -141,6 +183,18 @@ namespace liblichtenstein::mdns::platform {
       service->port = ntohs(port);
     }
 
+    // resolve interface number if available
+    if(interfaceIndex) {
+      char buf[IF_NAMESIZE]{};
+      char *ret = if_indextoname(interfaceIndex, buf);
+
+      if(ret != nullptr) {
+        service->interfaceName = std::string(buf);
+      } else {
+        PLOG(ERROR) << "Failed to convert interface name: ";
+      }
+    }
+
     // if no more data is coming, terminate resolving
     if((flags & kDNSServiceFlagsMoreComing) != kDNSServiceFlagsMoreComing) {
       service->resolveDone = true;
@@ -158,6 +212,9 @@ namespace liblichtenstein::mdns::platform {
    */
   void AppleBrowserService::processTxtRecord(const unsigned char *data,
                                              size_t len) {
+    // just get the lock once at the start while we modify
+    std::unique_lock lock(this->txtLock);
+
     // remove any existing records
     this->txtRecords.clear();
 
@@ -179,6 +236,16 @@ namespace liblichtenstein::mdns::platform {
 
       // increment the counter
       i += numBytes;
+    }
+  }
+
+  void AppleBrowserService::getTxtRecords(
+          IBrowserService::TxtRecordsType &outRecords) {
+    // just get the lock once at the start while we modify
+    std::unique_lock lock(this->txtLock);
+
+    for(auto &[key, value] : this->txtRecords) {
+      outRecords[key] = value;
     }
   }
 }

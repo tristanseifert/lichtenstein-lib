@@ -56,10 +56,11 @@ int main(int argc, char **argv) {
   str << "Found clients:" << std::endl;
 
   str << std::setw(16) << "Service Type";
+  str << std::setw(10) << "Interface";
   str << std::setw(20) << "Name";
   str << std::setw(32) << "Host";
   str << std::setw(6) << "Port";
-  str << std::setw(60) << "TXT Record";
+  str << " TXT Record";
   str << std::endl;
 
   for(auto &svc : results) {
@@ -68,8 +69,19 @@ int main(int argc, char **argv) {
     // resolve record
     svc->resolve(1s);
 
+    // convert txt records to string
+    svc->getTxtRecords(txt);
+
+    std::stringstream txtStr;
+
+    for(auto &[key, value] : txt) {
+      txtStr << key << "=" << value << " ";
+    }
+
     // output it
     str << std::setw(16) << svc->getServiceType();
+    str << std::setw(10) << (svc->getInterfaceName().has_value()
+                             ? svc->getInterfaceName().value() : "N/A");
     str << std::setw(20) << svc->getServiceName();
     str << std::setw(32)
         << (svc->getHostname().has_value() ? svc->getHostname().value()
@@ -77,7 +89,7 @@ int main(int argc, char **argv) {
     str << std::setw(6)
         << (svc->getPort().has_value() ? std::to_string(svc->getPort().value())
                                        : "N/A");
-    str << std::setw(60) << "???";
+    str << " " << txtStr.str();
     str << std::endl;
   }
 

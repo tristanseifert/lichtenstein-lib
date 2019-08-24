@@ -17,17 +17,6 @@ namespace liblichtenstein::mdns::platform {
    * Creates the service browser.
    */
   AppleBrowser::AppleBrowser(const std::string name) : serviceName(name) {
-    DNSServiceErrorType err;
-
-    // create a connection
-//    err = DNSServiceCreateConnection(&this->svc);
-//
-//    if(err != kDNSServiceErr_NoError) {
-//      std::stringstream error;
-//      error << "DNSServiceCreateConnection() failed: " << err;
-//
-//      throw std::runtime_error(error.str());
-//    }
 
   }
 
@@ -35,6 +24,12 @@ namespace liblichtenstein::mdns::platform {
    * Deallocates the service ref if it hasn't been already.
    */
   AppleBrowser::~AppleBrowser() {
+    // notify any functions that are still waiting
+    this->browseDone = true;
+    this->shutdown = true;
+    this->browseCv.notify_all();
+
+    // delete DNS service connection
     if(this->svc) {
       DNSServiceRefDeallocate(this->svc);
       this->svc = nullptr;
@@ -52,6 +47,8 @@ namespace liblichtenstein::mdns::platform {
     // reset some state
     {
       std::lock_guard lock(this->browseLock);
+
+      this->browseError = kDNSServiceErr_NoError;
       this->browseDone = false;
     }
 
@@ -83,16 +80,36 @@ namespace liblichtenstein::mdns::platform {
     std::unique_lock<std::mutex> lk(this->browseLock);
 
     if(this->browseCv.wait_for(lk, timeout, [this] {
-      return (this->browseDone == true);
+      return (this->browseDone) || (this->shutdown) ||
+             (this->browseError != kDNSServiceErr_NoError);
     })) {
-      // found all data
+      // something happened, figure out what
+      if(this->browseDone) {
+        // browsing completed, yay
+      } else if(this->shutdown) {
+        // we're being deallocated
+        return;
+      } else if(this->browseError != kDNSServiceErr_NoError) {
+        // an error occurred while browsing; deallocate service and throw
+        if(this->svc) {
+          DNSServiceRefDeallocate(this->svc);
+          this->svc = nullptr;
+        }
+
+        std::stringstream error;
+        error << "Error while browsing: " << err;
+
+        throw std::runtime_error(error.str());
+      }
     } else {
-      // browsing timed out, we might still have data
+      // browsing timed out, we might still have data though
     }
 
     // deallocate service ref
-    DNSServiceRefDeallocate(this->svc);
-    this->svc = nullptr;
+    if(this->svc) {
+      DNSServiceRefDeallocate(this->svc);
+      this->svc = nullptr;
+    }
   }
 
   void AppleBrowser::browseCallback(DNSServiceRef sdRef, DNSServiceFlags flags,
@@ -106,9 +123,11 @@ namespace liblichtenstein::mdns::platform {
 
     // handle errors
     if(errorCode != kDNSServiceErr_NoError) {
-      LOG(ERROR) << "Error resolving service: " << errorCode;
+      LOG(ERROR) << "Error while browsing for service: " << errorCode;
 
-      // TODO: forward this to browse function
+      // forward this to browse function
+      browser->browseError = errorCode;
+      browser->browseCv.notify_all();
 
       return;
     }

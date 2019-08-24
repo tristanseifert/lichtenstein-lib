@@ -66,6 +66,21 @@ namespace liblichtenstein::mdns {
        * @return Domain, if available
        */
       [[nodiscard]] virtual std::optional<std::string> getHostname() const = 0;
+
+      /**
+       * Gets all TXT records for this service.
+       *
+       * @param outRecords Vecctor to add the records to
+       */
+      virtual void getTxtRecords(TxtRecordsType &outRecords) = 0;
+
+      /**
+       * Gets the interface on which the service was discovered.
+       *
+       * @return Interface on which this service was discovered on, if available
+       */
+      [[nodiscard]] virtual std::optional<std::string>
+      getInterfaceName() const = 0;
   };
 }
 
