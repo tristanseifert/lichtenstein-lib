@@ -1,0 +1,13 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+/**
+ * Response to a HMAC authentication request. This just contains the digest of
+ * the resultant HMAC.
+ */
+message HmacAuthResponse {
+    // raw HMAC data
+    bytes hmac = 1;
+    // nonce provided earlier
+    bytes nonce = 2;
+}

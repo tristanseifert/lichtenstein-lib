@@ -1,0 +1,16 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+import "google/protobuf/any.proto";
+
+/**
+ * Sent in response to an AuthHello message, it contains the authentication
+ * mechanism selected by the server, and data specific to it.
+ */
+message AuthChallenge {
+    // selected auth method
+    string method = 1;
+
+    // method-specific challenge data
+    google.protobuf.Any payload = 2;
+}

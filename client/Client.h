@@ -24,6 +24,8 @@ namespace liblichtenstein {
 
   namespace io {
     class DTLSClient;
+
+    class TLSClient;
     class TLSServer;
 
     class GenericServerClient;
@@ -93,12 +95,17 @@ namespace liblichtenstein {
       void setNextState(StateMachineState next);
 
     private:
+      void attemptServerConnection();
+
+      bool validateAdoptionToken(const std::string &token);
+
+    private:
       // node UUID
       uuids::uuid nodeUuid;
 
     private:
       // overall client state machine thread
-      std::thread *stateMachineThread = nullptr;
+      std::unique_ptr<std::thread> stateMachineThread;
       // whether the state machine should shut down
       std::atomic_bool stateMachineShutdown = false;
 
@@ -110,12 +117,12 @@ namespace liblichtenstein {
 
     private:
       // worker thread for handling the realtime protocol
-      std::thread *rtThread = nullptr;
+      std::unique_ptr<std::thread> rtThread = nullptr;
       // whether the real time client is shutting down
       std::atomic_bool rtShutdown = false;
 
       // DTLS client to realtime API
-      io::DTLSClient *rtClient = nullptr;
+      std::unique_ptr<io::DTLSClient> rtClient;
 
       // mutex for condition variable
       std::mutex stateMachineCvLock;
@@ -137,6 +144,10 @@ namespace liblichtenstein {
       std::string apiCertPath;
       // path to API certificate private key
       std::string apiCertKeyPath;
+
+    private:
+      // TLS client to server API
+      std::unique_ptr<io::TLSClient> serverApiClient;
 
     private:
       // data store containing our internal state

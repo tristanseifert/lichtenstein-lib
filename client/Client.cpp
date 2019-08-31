@@ -11,12 +11,12 @@
 #include "io/mdns/Service.h"
 
 #include "api/API.h"
-
+#include "io/TLSClient.h"
 #include "io/OpenSSLError.h"
 #include "io/DTLSClient.h"
 
-
-
+using SSLError = liblichtenstein::io::OpenSSLError;
+using TLSClient = liblichtenstein::io::TLSClient;
 
 /*
  * The client is implemented as a state machine that runs in its own thread. It
@@ -57,7 +57,8 @@ namespace liblichtenstein {
 
     // set up the thread for the client state machine
     this->stateMachineShutdown = false;
-    this->stateMachineThread = new std::thread(&Client::stateMachine, this);
+    this->stateMachineThread.reset(
+            new std::thread(&Client::stateMachine, this));
   }
 
   /**
@@ -91,8 +92,6 @@ namespace liblichtenstein {
         this->stateMachineThread->join();
       }
 
-      // deallocate all of its resources
-      delete this->stateMachineThread;
       this->stateMachineThread = nullptr;
     }
   }
@@ -104,11 +103,20 @@ namespace liblichtenstein {
   void Client::stopRt() {
     // mark to the handler to terminate and close the client connection
     this->rtShutdown = true;
-    this->rtClient->close();
+
+    if(this->rtClient) {
+      this->rtClient->close();
+      this->rtClient = nullptr;
+    }
 
     // join the protocol handler thread
-    this->rtThread->join();
-    delete this->rtThread;
+    if(this->rtThread) {
+      if(this->rtThread->joinable()) {
+        this->rtThread->join();
+      }
+
+      this->rtThread = nullptr;
+    }
   }
 
 
@@ -151,7 +159,7 @@ namespace liblichtenstein {
          */
         case START: {
           // are we adopted (per our data store)
-          if(this->dataStore->get("isAdopted") == "1") {
+          if(this->dataStore->get("adoption.valid") == "1") {
             // we have been adopted, so verify it
             this->stateMachineCurrent = VERIFY_ADOPT;
           } else {
@@ -210,6 +218,12 @@ namespace liblichtenstein {
       }
     }
 
+    // clean up the server API connection
+    if(this->serverApiClient) {
+      this->serverApiClient->close();
+      this->serverApiClient = nullptr;
+    }
+
     // clean up API server thread
     VLOG(1) << "Shutting down API";
     delete this->apiHandler;
@@ -245,5 +259,73 @@ namespace liblichtenstein {
 
     // notify state machine
     this->stateMachineCv.notify_one();
+  }
+
+  /**
+   * Attempts to use the stored hostname/port combination to connect to the
+   * server.
+   */
+  void Client::attemptServerConnection() {
+    // get server info
+    auto host = this->dataStore->get("server.host");
+    auto port = this->dataStore->get("server.port");
+
+    if(!host.has_value() || !port.has_value()) {
+      // we were missing either the host or port value
+      LOG(ERROR)
+              << "Missing host or port in data store, invalidating adoption state";
+      this->dataStore->set("adoption.valid", "0");
+
+      throw std::runtime_error("Missing host or port in data store");
+    }
+
+    // try to connect
+    try {
+      this->serverApiClient = std::make_unique<TLSClient>(host.value(),
+                                                          std::stoi(
+                                                                  port.value()));
+
+      // TODO: configure the certificate validation
+    } catch(std::system_error &e) {
+      LOG(ERROR) << "Failed to connect to server: " << e.what();
+      return;
+    } catch(SSLError &e) {
+      LOG(ERROR) << "SSL error connecting to server: " << e.what();
+      return;
+    }
+
+    // validate the adoption state
+    auto token = this->dataStore->get("adoption.token");
+
+    if(!token.has_value()) {
+      LOG(ERROR) << "Missing adoption token";
+      this->dataStore->set("adoption.valid", "0");
+
+      throw std::runtime_error("Missing adoption token in data store");
+    }
+
+    if(!this->validateAdoptionToken(token.value())) {
+      // it was not valid, so clear state and return
+      LOG(ERROR) << "Server rejected token, invalidating adoption";
+      this->dataStore->set("adoption.valid", "0");
+
+      this->serverApiClient->close();
+      this->serverApiClient = nullptr;
+
+      this->setNextState(IDLE);
+
+      return;
+    }
+  }
+
+  /**
+   * Validates the provided adoption token with the server. This is done by
+   * handling the challenge/response
+   *
+   * @param token Adoption token
+   */
+  bool Client::validateAdoptionToken(const std::string &token) {
+    // TODO: implement
+    return false;
   }
 }

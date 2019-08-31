@@ -1,0 +1,14 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+/**
+ * Indicates the state of challenge/response authentication. If there were any
+ * errors during the process, they are reported with this message.
+ */
+message AuthState {
+    // was it a success?
+    bool success = 1;
+
+    // error details (if not successful)
+    string errorDetails = 2;
+}

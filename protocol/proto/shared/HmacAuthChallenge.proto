@@ -1,0 +1,17 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+/**
+ * Specifies a HMAC challenge.
+ */
+message HmacAuthChallenge {
+    // type of hash function to use for the HMAC
+    enum HashFunction {
+        SHA1 = 0;
+        WHIRLPOOL = 1;
+    };
+
+    HashFunction function = 1;
+    // nonce to add to the HMAC (the challenge)
+    bytes nonce = 2;
+}

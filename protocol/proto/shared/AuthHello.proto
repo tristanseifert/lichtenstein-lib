@@ -1,0 +1,16 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+/**
+ * Sent to start the authentication process
+ */
+message AuthHello {
+    // UUID to authenticate as
+    bytes uuid = 1;
+
+    /**
+     * List of supported authentication mechanisms; this is a list in reverse
+     * DNS style.
+     */
+    repeated string supportedMethods = 2;
+}

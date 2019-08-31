@@ -3,6 +3,7 @@ add_executable(client client.cpp BasicFileDataStore.cpp BasicFileDataStore.h)
 
 # include stduuid library
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../libs/stduuid/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
 # link lichtenstein client lib
 target_link_libraries(client lichtensteinClient)
