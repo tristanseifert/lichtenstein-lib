@@ -15,6 +15,8 @@
 #include "io/OpenSSLError.h"
 #include "io/DTLSClient.h"
 
+#include "helpers/HmacChallengeHandler.h"
+
 using SSLError = liblichtenstein::io::OpenSSLError;
 using TLSClient = liblichtenstein::io::TLSClient;
 
@@ -281,9 +283,10 @@ namespace liblichtenstein {
 
     // try to connect
     try {
+      int portNum = std::stoi(port.value());
+
       this->serverApiClient = std::make_unique<TLSClient>(host.value(),
-                                                          std::stoi(
-                                                                  port.value()));
+                                                          portNum);
 
       // TODO: configure the certificate validation
     } catch(std::system_error &e) {
@@ -325,7 +328,19 @@ namespace liblichtenstein {
    * @param token Adoption token
    */
   bool Client::validateAdoptionToken(const std::string &token) {
-    // TODO: implement
-    return false;
+    // crate the HMAC auth handler
+    helpers::HmacChallengeHandler handler(this->serverApiClient, token,
+                                          this->nodeUuid);
+
+    try {
+      handler.authenticate();
+    } catch(std::exception &e) {
+      LOG(ERROR) << "Failed to authenticate: " << e.what();
+
+      return false;
+    }
+
+    // if we get here, authentication was successful
+    return true;
   }
 }

@@ -147,7 +147,7 @@ namespace liblichtenstein {
 
     private:
       // TLS client to server API
-      std::unique_ptr<io::TLSClient> serverApiClient;
+      std::shared_ptr<io::TLSClient> serverApiClient;
 
     private:
       // data store containing our internal state

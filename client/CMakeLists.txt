@@ -1,4 +1,8 @@
-# compile in the git version file
+# define the library
+add_library(lichtensteinClient SHARED version.c version.h Client.cpp Client.h api/API.cpp api/API.h api/ClientHandler.cpp api/ClientHandler.h api/IRequestHandler.h api/handlers/GetInfoReq.cpp api/handlers/GetInfoReq.h api/HandlerFactory.cpp api/HandlerFactory.h IClientDataStore.h helpers/HmacChallengeHandler.cpp helpers/HmacChallengeHandler.h)
+
+
+# get Git info and compile it into the binary
 include(GetGitRevisionDescription)
 git_describe(VERSION --tags --dirty=-d)
 
@@ -14,8 +18,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.cpp.in
         ${CMAKE_CURRENT_BINARY_DIR}/version.cpp)
 set(version_file "${CMAKE_CURRENT_BINARY_DIR}/version.cpp")
 
-# define the library
-add_library(lichtensteinClient SHARED ${version_file} version.c version.h Client.cpp Client.h api/API.cpp api/API.h api/ClientHandler.cpp api/ClientHandler.h api/IRequestHandler.h api/handlers/GetInfoReq.cpp api/handlers/GetInfoReq.h api/HandlerFactory.cpp api/HandlerFactory.h IClientDataStore.h)
+target_sources(lichtensteinClient PRIVATE ${version_file})
 
 # link with the protobufs and IO libs
 target_link_libraries(lichtensteinClient lichtensteinProto lichtensteinIo)
