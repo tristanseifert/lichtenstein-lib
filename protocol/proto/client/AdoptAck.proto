@@ -1,0 +1,10 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+/**
+ * Indicates that adoption has completed.
+ */
+message AdoptAck {
+    // new adoption state
+    bool isAdopted = 1;
+}

@@ -5,6 +5,8 @@
 #ifndef LIBLICHTENSTEIN_CLIENT_H
 #define LIBLICHTENSTEIN_CLIENT_H
 
+#include "IClientDataStore.h"
+
 #include <string>
 #include <thread>
 #include <atomic>
@@ -20,8 +22,6 @@
 
 
 namespace liblichtenstein {
-  class IClientDataStore;
-
   namespace io {
     class DTLSClient;
 
@@ -35,6 +35,10 @@ namespace liblichtenstein {
     class API;
 
     class RealtimeClient;
+
+    namespace handler {
+      class AdoptRequest;
+    }
   }
 
   namespace mdns {
@@ -53,6 +57,8 @@ namespace liblichtenstein {
   class Client {
       friend class api::RealtimeClient;
 
+      friend class api::handler::AdoptRequest;
+
     private:
       typedef enum {
         START,
@@ -60,6 +66,7 @@ namespace liblichtenstein {
         SHUTDOWN,
 
         VERIFY_ADOPT,
+        START_RT,
       } StateMachineState;
 
     public:
@@ -88,6 +95,21 @@ namespace liblichtenstein {
         this->dataStore = store;
       }
 
+    public:
+      bool isAdopted() const {
+        auto result = this->dataStore->get("adoption.valid");
+
+        return (result.has_value() && (result == "1"));
+      }
+
+      uuids::uuid getNodeUuid() const {
+        return this->nodeUuid;
+      }
+
+      std::shared_ptr<IClientDataStore> getDataStore() {
+        return this->dataStore;
+      }
+
     private:
       void checkConfig();
 
@@ -100,6 +122,12 @@ namespace liblichtenstein {
       void setNextState(StateMachineState next);
 
     private:
+      /// attempt to verify adoption state (same as VERIFY_ADOPT state)
+      void verifyAdoption() {
+        this->attemptServerConnection();
+        this->setNextState(START_RT);
+      }
+
       void attemptServerConnection();
 
       bool validateAdoptionToken(const std::string &token);

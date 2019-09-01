@@ -1,0 +1,23 @@
+syntax = "proto3";
+package lichtenstein.protocol.client;
+
+/**
+ * Attempts to adopt the node.
+ */
+message AdoptRequest {
+    // server UUID
+    bytes serverUuid = 1;
+
+    // server API address
+    string apiAddress = 2;
+    // server API port
+    uint32 apiPort = 3;
+
+    // server realtime service address
+    string rtAddress = 4;
+    // server realtime service port
+    uint32 rtPort = 5;
+
+    // secret key generated for this node
+    string secret = 6;
+}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+package lichtenstein.protocol;
+
+/**
+ * A generic error message that is sent over the wire whenever a message could
+ * not be properly understood.
+ */
+message Error {
+    // an error code (if available)
+    fixed32 code = 1;
+
+    // human-readable description
+    string description = 2;
+}

@@ -7,6 +7,7 @@
 
 #include <glog/logging.h>
 
+#include <memory>
 #include <utility>
 
 #include "io/mdns/Service.h"
@@ -59,8 +60,8 @@ namespace liblichtenstein {
 
     // set up the thread for the client state machine
     this->stateMachineShutdown = false;
-    this->stateMachineThread.reset(
-            new std::thread(&Client::stateMachine, this));
+    this->stateMachineThread = std::make_unique<std::thread>(
+            &Client::stateMachine, this);
   }
 
   /**
@@ -119,6 +120,9 @@ namespace liblichtenstein {
 
     this->rtClient = std::make_unique<api::RealtimeClient>(this, host.value(),
                                                            port);
+
+    // done!
+    this->setNextState(IDLE);
   }
 
   /**
@@ -145,8 +149,7 @@ namespace liblichtenstein {
       this->clientService->startAdvertising();
       this->clientService->setTxtRecord("version", "0.1");
       this->clientService->setTxtRecord("type", "client");
-      this->clientService->setTxtRecord("uuid",
-                                        uuids::to_string(this->nodeUuid));
+      this->clientService->setTxtRecord("uuid", to_string(this->nodeUuid));
     }
 
 
@@ -155,7 +158,7 @@ namespace liblichtenstein {
 
     this->apiHandler = new api::API(this->apiHost, this->apiPort,
                                     this->apiCertPath,
-                                    this->apiCertKeyPath);
+                                    this->apiCertKeyPath, this);
 
 
 
@@ -170,7 +173,7 @@ namespace liblichtenstein {
          */
         case START: {
           // are we adopted (per our data store)
-          if(this->dataStore->get("adoption.valid") == "1") {
+          if(this->isAdopted()) {
             // we have been adopted, so verify it
             this->stateMachineCurrent = VERIFY_ADOPT;
           } else {
@@ -178,6 +181,15 @@ namespace liblichtenstein {
             LOG(INFO) << "Node is not adopted; waiting for adoption";
             this->stateMachineCurrent = IDLE;
           }
+          break;
+        }
+
+          /**
+           * Establishes the realtime service connection
+           */
+        case START_RT: {
+          // this attempts to initialize the realtime connection
+          this->startRt();
           break;
         }
 
@@ -223,7 +235,17 @@ namespace liblichtenstein {
            * increase) and try to verify the adoption again.
            */
         case VERIFY_ADOPT: {
-          this->attemptServerConnection();
+          try {
+            // attempt connection; if it doesn't throw we're set :)
+            this->verifyAdoption();
+          } catch(std::exception &e) {
+            // we failed to set up the connection
+            LOG(ERROR) << "Failed to verify adoption: " << e.what();
+
+            // TODO: try again after some time instead of going back to idle
+            this->setNextState(IDLE);
+          }
+
           break;
         }
       }
@@ -288,20 +310,12 @@ namespace liblichtenstein {
     }
 
     // try to connect
-    try {
-      int portNum = std::stoi(port.value());
+    int portNum = std::stoi(port.value());
 
-      this->serverApiClient = std::make_unique<TLSClient>(host.value(),
-                                                          portNum);
+    this->serverApiClient = std::make_unique<TLSClient>(host.value(),
+                                                        portNum);
 
-      // TODO: configure the certificate validation
-    } catch(std::system_error &e) {
-      LOG(ERROR) << "Failed to connect to server: " << e.what();
-      return;
-    } catch(SSLError &e) {
-      LOG(ERROR) << "SSL error connecting to server: " << e.what();
-      return;
-    }
+    // TODO: configure the certificate validation
 
     // validate the adoption state
     auto token = this->dataStore->get("adoption.token");
@@ -321,16 +335,10 @@ namespace liblichtenstein {
       this->serverApiClient->close();
       this->serverApiClient = nullptr;
 
-      this->setNextState(IDLE);
-
-      return;
+      throw std::runtime_error("Failed to authenticate with server");
     }
 
-    // establish realtime connection
-    this->startRt();
-
-    // we've finished adoption, wait around for stuff to happen
-    this->setNextState(IDLE);
+    // success, the connection was authenticated
   }
 
   /**
@@ -349,7 +357,8 @@ namespace liblichtenstein {
     } catch(std::exception &e) {
       LOG(ERROR) << "Failed to authenticate: " << e.what();
 
-      return false;
+      throw e;
+//      return false;
     }
 
     // if we get here, authentication was successful

@@ -5,6 +5,7 @@
 #include "GetInfoReq.h"
 #include "../ClientHandler.h"
 #include "../HandlerFactory.h"
+#include "../../Client.h"
 
 #include <glog/logging.h>
 
@@ -119,6 +120,10 @@ namespace liblichtenstein::api::handler {
             std::string(gVERSION_HASH) + ")";
     node->set_client(client);
 
+    // extract uuid
+    auto uuidBytes = this->getClient()->getNodeUuid().as_bytes();
+    node->set_uuid(uuidBytes.data(), uuidBytes.size());
+
     return node;
   }
 
@@ -140,6 +145,9 @@ namespace liblichtenstein::api::handler {
    */
   AdoptionStatus *GetInfoReq::makeAdoptionStatus() {
     auto *adoption = new AdoptionStatus();
+
+    // are we adopted?
+    adoption->set_isadopted(this->getClient()->isAdopted());
 
     return adoption;
   }

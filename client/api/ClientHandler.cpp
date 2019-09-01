@@ -3,6 +3,7 @@
 //
 #include "../version.h"
 
+#include "API.h"
 #include "ClientHandler.h"
 #include "HandlerFactory.h"
 #include "protocol/ProtocolError.h"
@@ -83,11 +84,15 @@ namespace liblichtenstein::api {
         // an error decoding message
       catch(ProtocolError &e) {
         LOG(ERROR) << "Protocol error, closing connection: " << e.what();
+        this->sendException(e);
+
         break;
       }
         // some other runtime error happened
       catch(std::runtime_error &e) {
         LOG(ERROR) << "Runtime error reading from client: " << e.what();
+        this->sendException(e);
+
         break;
       }
     }
@@ -123,5 +128,14 @@ namespace liblichtenstein::api {
       error << "Received message of unknown type " << type;
       throw ProtocolError(error.str().c_str());
     }
+  }
+
+  /**
+   * Returns the pointer to the client state machine.
+   *
+   * @return
+   */
+  Client *ClientHandler::getClient() {
+    return this->api->client;
   }
 }

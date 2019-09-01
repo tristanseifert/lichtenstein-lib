@@ -25,6 +25,10 @@ namespace lichtenstein::protocol {
   }
 }
 
+namespace liblichtenstein {
+  class Client;
+}
+
 namespace liblichtenstein::io {
   class GenericServerClient;
 }
@@ -32,11 +36,20 @@ namespace liblichtenstein::io {
 namespace liblichtenstein::api {
   class API;
 
+  class IRequestHandler;
+
   class ClientHandler : public GenericClientHandler {
+      friend class Client;
+
+      friend class IRequestHandler;
+
     public:
       ClientHandler(API *api, std::shared_ptr<io::GenericServerClient> client);
 
       ~ClientHandler() override;
+
+    protected:
+      Client *getClient();
 
     private:
       void handle();

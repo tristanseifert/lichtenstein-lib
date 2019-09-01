@@ -15,6 +15,10 @@ namespace liblichtenstein::io {
   class GenericServerClient;
 }
 
+namespace liblichtenstein {
+  class Client;
+}
+
 namespace liblichtenstein::api {
   class ClientHandler;
 
@@ -22,9 +26,17 @@ namespace liblichtenstein::api {
    * A standalone handler for the client API.
    */
   class API {
+      friend class ClientHandler;
+
     public:
       API(std::string &listenHost, unsigned int port,
           std::string &certPath, std::string &certKeyPath);
+
+      API(std::string &listenHost, unsigned int port,
+          std::string &certPath, std::string &certKeyPath, Client *client)
+              : API(listenHost, port, certPath, certKeyPath) {
+        this->client = client;
+      };
 
       virtual ~API();
 
@@ -56,6 +68,9 @@ namespace liblichtenstein::api {
 
       // a list of clients we've accepted and their threads
       std::vector<std::shared_ptr<ClientHandler>> clients;
+
+      // client state machine
+      Client *client = nullptr;
   };
 }
 

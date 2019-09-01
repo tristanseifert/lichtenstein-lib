@@ -31,10 +31,6 @@ namespace liblichtenstein::api {
       static void serialize(std::vector<std::byte> &out,
                             google::protobuf::Message &payload);
 
-      static void serializeWithAuth(std::vector<std::byte> &out,
-                                    const std::vector<std::byte> &authToken,
-                                    google::protobuf::Message &payload);
-
     private:
       static void makeBasicMessage(const google::protobuf::Message &payload,
                                    lichtenstein::protocol::Message &message);

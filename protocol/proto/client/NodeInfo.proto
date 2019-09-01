@@ -15,4 +15,7 @@ message NodeInfo {
 
     // lichtenstein client software info
     string client = 4;
+
+    // node UUID
+    bytes uuid = 5;
 }

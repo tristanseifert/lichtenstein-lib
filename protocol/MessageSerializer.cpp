@@ -21,34 +21,6 @@
 
 namespace liblichtenstein::api {
   /**
-   * Serializes the given message, including an authentication token, into the
-   * byte vector specified.
-   *
-   * @param out Vector to hold generated wire message
-   * @param authToken Binary auth token to send with message
-   * @param payload Message to encapsulate
-   */
-  void MessageSerializer::serializeWithAuth(std::vector<std::byte> &out,
-                                            const std::vector<std::byte> &authToken,
-                                            google::protobuf::Message &payload) {
-    // generate the basic message
-    lichtenstein::protocol::Message message;
-    makeBasicMessage(payload, message);
-
-    // copy the token
-    auto *token = new lichtenstein::protocol::AuthToken();
-    auto *tokenStr = new std::string(
-            reinterpret_cast<const char *>(authToken.data()), authToken.size());
-
-    token->set_allocated_token(tokenStr);
-
-    message.set_allocated_token(token);
-
-    // serialize it into a buffer
-    createWireMessage(out, message);
-  }
-
-  /**
    * Serializes the given message into the byte vector specified.
    *
    * @param out Vector to hold generated wire message

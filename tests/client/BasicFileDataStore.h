@@ -32,7 +32,7 @@ class BasicFileDataStore : public liblichtenstein::IClientDataStore {
       if(this->hasKey(key)) {
         return this->data.find(key)->second;
       } else {
-        return nullptr;
+        return std::nullopt;
       }
     }
 

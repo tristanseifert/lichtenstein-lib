@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <atomic>
+#include <exception>
 
 namespace google::protobuf {
   class Message;
@@ -45,6 +46,9 @@ namespace liblichtenstein::api {
       virtual void close() {
         this->shutdown = true;
       }
+
+      /// processes a generic exception into an error message
+      virtual void sendException(const std::exception &e) noexcept;
 
     protected:
       void readMessage(const std::function<void(protoMessageType &)> &success);

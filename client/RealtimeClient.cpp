@@ -88,13 +88,13 @@ namespace liblichtenstein::api {
 
     try {
       handler.authenticate();
+
+      VLOG(1) << "Successfully authenticated realtime client";
     } catch(std::exception &e) {
       LOG(ERROR) << "Failed to authenticate realtime client: " << e.what();
 
       this->shutdown = true;
     }
-
-    VLOG(1) << "Successfully authenticated realtime client";
 
 
     // wait for a message

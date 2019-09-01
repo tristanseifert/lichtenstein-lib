@@ -8,12 +8,15 @@
 #include "version.h"
 
 #include "proto/shared/Message.pb.h"
+#include "proto/shared/Error.pb.h"
 
 #include "../io/GenericServerClient.h"
 
 #include <glog/logging.h>
 
 #include <google/protobuf/message.h>
+
+using lichtenstein::protocol::Error;
 
 
 namespace liblichtenstein::api {
@@ -151,5 +154,26 @@ namespace liblichtenstein::api {
 
     // message is valid, so run callback
     success(message);
+  }
+
+  /**
+   * Packages the provided C++ exception and sends it as an Error message over
+   * the connection. Any errors that happen while sending the exception are
+   * silently ignored.
+   *
+   * @param e Exception to send
+   */
+  void GenericClientHandler::sendException(const std::exception &e) noexcept {
+    // create error message
+    Error err;
+
+    err.set_description(e.what());
+
+    // send it
+    try {
+      this->sendResponse(err);
+    } catch(std::exception &e) {
+      LOG(WARNING) << "Failed to send error alert: " << e.what();
+    }
   }
 }
