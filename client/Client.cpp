@@ -3,6 +3,7 @@
 //
 #include "Client.h"
 #include "IClientDataStore.h"
+#include "RealtimeClient.h"
 
 #include <glog/logging.h>
 
@@ -13,7 +14,6 @@
 #include "api/API.h"
 #include "io/TLSClient.h"
 #include "io/OpenSSLError.h"
-#include "io/DTLSClient.h"
 
 #include "helpers/HmacChallengeHandler.h"
 
@@ -99,26 +99,35 @@ namespace liblichtenstein {
   }
 
   /**
+   * Starts the realtime protocol handler.
+   */
+  void Client::startRt() {
+    // read the hostname and port from the config
+    auto host = this->dataStore->get("rt.host");
+    auto portStr = this->dataStore->get("rt.port");
+
+    if(!host.has_value() || !portStr.has_value()) {
+      // we were missing either the host or port value
+      LOG(ERROR) << "Missing host or port in data store, invalidating adoption";
+      this->dataStore->set("adoption.valid", "0");
+
+      throw std::runtime_error("Missing host or port in data store");
+    }
+
+    // attempt to connect
+    unsigned int port = std::stoi(portStr.value());
+
+    this->rtClient = std::make_unique<api::RealtimeClient>(this, host.value(),
+                                                           port);
+  }
+
+  /**
    * Terminates the realtime protocol handler. This closes the DTLS connection
    * and attempts to join the worker thread.
    */
   void Client::stopRt() {
-    // mark to the handler to terminate and close the client connection
-    this->rtShutdown = true;
-
-    if(this->rtClient) {
-      this->rtClient->close();
-      this->rtClient = nullptr;
-    }
-
-    // join the protocol handler thread
-    if(this->rtThread) {
-      if(this->rtThread->joinable()) {
-        this->rtThread->join();
-      }
-
-      this->rtThread = nullptr;
-    }
+    // deallocating is all we need to do to stop it
+    this->rtClient = nullptr;
   }
 
 
@@ -214,7 +223,7 @@ namespace liblichtenstein {
            * increase) and try to verify the adoption again.
            */
         case VERIFY_ADOPT: {
-          // TODO: implement
+          this->attemptServerConnection();
           break;
         }
       }
@@ -232,10 +241,7 @@ namespace liblichtenstein {
     this->apiHandler = nullptr;
 
     // clean up realtime connection if it was ever started
-    if (this->rtThread) {
-      VLOG(1) << "Shutting down realtime channel";
-      this->stopRt();
-    }
+    this->stopRt();
 
     VLOG(2) << "State machine is done, bye bye";
   }
@@ -319,6 +325,12 @@ namespace liblichtenstein {
 
       return;
     }
+
+    // establish realtime connection
+    this->startRt();
+
+    // we've finished adoption, wait around for stuff to happen
+    this->setNextState(IDLE);
   }
 
   /**

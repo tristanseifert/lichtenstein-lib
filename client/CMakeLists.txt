@@ -1,5 +1,5 @@
 # define the library
-add_library(lichtensteinClient SHARED version.c version.h Client.cpp Client.h api/API.cpp api/API.h api/ClientHandler.cpp api/ClientHandler.h api/IRequestHandler.h api/handlers/GetInfoReq.cpp api/handlers/GetInfoReq.h api/HandlerFactory.cpp api/HandlerFactory.h IClientDataStore.h helpers/HmacChallengeHandler.cpp helpers/HmacChallengeHandler.h)
+add_library(lichtensteinClient SHARED version.c version.h Client.cpp Client.h api/API.cpp api/API.h api/ClientHandler.cpp api/ClientHandler.h api/IRequestHandler.h api/handlers/GetInfoReq.cpp api/handlers/GetInfoReq.h api/HandlerFactory.cpp api/HandlerFactory.h IClientDataStore.h helpers/HmacChallengeHandler.cpp helpers/HmacChallengeHandler.h RealtimeClient.cpp RealtimeClient.h)
 
 
 # get Git info and compile it into the binary

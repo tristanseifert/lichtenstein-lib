@@ -17,7 +17,7 @@
 #include "shared/HmacAuthChallenge.pb.h"
 #include "shared/HmacAuthResponse.pb.h"
 
-#include "io/TLSClient.h"
+#include "io/GenericTLSClient.h"
 
 #include <glog/logging.h>
 
@@ -50,7 +50,7 @@ namespace liblichtenstein::helpers {
    * @param uuid UUID to send in the authentication
    */
   HmacChallengeHandler::HmacChallengeHandler(
-          std::shared_ptr<io::TLSClient> client,
+          std::shared_ptr<io::GenericTLSClient> client,
           const std::string &secret, const uuids::uuid &uuid) : client(client),
                                                                 hmacSecret(
                                                                         secret),

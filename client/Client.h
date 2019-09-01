@@ -33,6 +33,8 @@ namespace liblichtenstein {
 
   namespace api {
     class API;
+
+    class RealtimeClient;
   }
 
   namespace mdns {
@@ -49,6 +51,8 @@ namespace liblichtenstein {
    * reloaded, or the client can be stopped entirely.
    */
   class Client {
+      friend class api::RealtimeClient;
+
     private:
       typedef enum {
         START,
@@ -87,6 +91,7 @@ namespace liblichtenstein {
     private:
       void checkConfig();
 
+      void startRt();
       void stopRt();
 
     private:
@@ -116,13 +121,8 @@ namespace liblichtenstein {
       std::unique_ptr<mdns::Service> clientService;
 
     private:
-      // worker thread for handling the realtime protocol
-      std::unique_ptr<std::thread> rtThread = nullptr;
-      // whether the real time client is shutting down
-      std::atomic_bool rtShutdown = false;
-
-      // DTLS client to realtime API
-      std::unique_ptr<io::DTLSClient> rtClient;
+      // realtime client
+      std::unique_ptr<api::RealtimeClient> rtClient;
 
       // mutex for condition variable
       std::mutex stateMachineCvLock;

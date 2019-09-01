@@ -24,7 +24,7 @@ namespace lichtenstein::protocol {
 
 
 namespace liblichtenstein::io {
-  class TLSClient;
+  class GenericTLSClient;
 }
 
 namespace liblichtenstein::helpers {
@@ -39,7 +39,9 @@ namespace liblichtenstein::helpers {
       static const std::string MethodName;
 
     public:
-      HmacChallengeHandler(std::shared_ptr<io::TLSClient> client,
+      HmacChallengeHandler() = delete;
+
+      HmacChallengeHandler(std::shared_ptr<io::GenericTLSClient> client,
                            const std::string &secret, const uuids::uuid &uuid);
 
       void authenticate();
@@ -73,7 +75,7 @@ namespace liblichtenstein::helpers {
       uuids::uuid uuid;
 
       // connection to the server on which we communicate
-      std::shared_ptr<io::TLSClient> client;
+      std::shared_ptr<io::GenericTLSClient> client;
       // secret for HMAC
       std::string hmacSecret;
   };
