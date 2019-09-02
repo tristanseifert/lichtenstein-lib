@@ -207,9 +207,9 @@ namespace liblichtenstein {
 
       // try to resolve hostname
       const char *hostname = host.c_str();
-      const char *portStr = (std::to_string(port)).c_str();
+      auto portStr = std::to_string(port);
 
-      err = getaddrinfo(hostname, portStr, &hints, &out);
+      err = getaddrinfo(hostname, portStr.c_str(), &hints, &out);
 
       if (err != 0) {
         throw std::system_error(errno, std::system_category(),
