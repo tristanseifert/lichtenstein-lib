@@ -64,8 +64,10 @@ namespace liblichtenstein::api {
     this->shutdown = true;
 
     // close connection
-    this->dtlsClient->close();
-    this->dtlsClient = nullptr;
+    if(this->dtlsClient) {
+      this->dtlsClient->close();
+      this->dtlsClient = nullptr;
+    }
 
     // stop thread
     if(this->thread->joinable()) {
@@ -81,7 +83,7 @@ namespace liblichtenstein::api {
    */
   void RealtimeClient::threadEntry() {
     // attempt to authenticate
-    auto secret = this->client->dataStore->get("adoption.token");
+    auto secret = this->client->dataStore->get("adoption.secret");
 
     HmacChallengeHandler handler(this->dtlsClient, secret.value(),
                                  this->client->nodeUuid);

@@ -58,7 +58,7 @@ namespace liblichtenstein::api {
   HmacChallengeHandler::HmacChallengeHandler(
           std::shared_ptr<io::GenericTLSClient> client,
           const std::string &secret, const uuids::uuid &uuid) : hmacSecret(
-                                                                        secret),
+          secret),
                                                                 uuid(uuid) {
     this->io = std::make_unique<MessageIO>(client);
   }
@@ -82,7 +82,7 @@ namespace liblichtenstein::api {
     this->verifyHello(hello);
 
     // generate random data for the challenge and send it
-    std::vector<std::byte> nonce;
+    std::vector<std::byte> nonce(kNonceLength, std::byte(0));
     this->generateRandom(nonce, kNonceLength);
 
     CHECK(nonce.size() > 0)
@@ -91,8 +91,11 @@ namespace liblichtenstein::api {
     this->sendChallenge(nonce);
 
     // compute the HMAC (so we can verify it) (TODO: make hash fn configurable)
-    std::vector<std::byte> computedHmac;
-    this->doHmac(computedHmac, EVP_whirlpool(), nonce);
+    auto hashFunction = EVP_whirlpool();
+    auto digestSize = EVP_MD_size(hashFunction);
+
+    std::vector<std::byte> computedHmac(digestSize, std::byte(0));
+    this->doHmac(computedHmac, hashFunction, nonce);
 
     // read the challenge response, this also verifies the response
     this->getAuthResponse(computedHmac, nonce);
@@ -232,8 +235,8 @@ namespace liblichtenstein::api {
     auto receivedNoncePtr = reinterpret_cast<const std::byte *>(response.nonce().data());
     auto receivedNonceLen = response.nonce().length();
 
-    std::vector<std::byte> receivedNonce;
-    receivedNonce.reserve(receivedNonceLen);
+    std::vector<std::byte> receivedNonce(receivedNonceLen, std::byte(0));
+
     std::copy(receivedNoncePtr, receivedNoncePtr + receivedNonceLen,
               receivedNonce.begin());
 
@@ -246,8 +249,8 @@ namespace liblichtenstein::api {
     auto receivedHmacPtr = reinterpret_cast<const std::byte *>(response.hmac().data());
     auto receivedHmacLen = response.hmac().length();
 
-    std::vector<std::byte> receivedHmac;
-    receivedHmac.reserve(receivedHmacLen);
+    std::vector<std::byte> receivedHmac(receivedHmacLen, std::byte(0));
+
     std::copy(receivedHmacPtr, receivedHmacPtr + receivedHmacLen,
               receivedHmac.begin());
 
@@ -357,24 +360,24 @@ namespace liblichtenstein::api {
     }
 
     // copy nonce into a vector
-    auto nonceStr = hmacChallenge.nonce();
-    std::vector<std::byte> nonce;
-    nonce.reserve(nonceStr.length());
+    auto noncePtr = reinterpret_cast<const std::byte *>(hmacChallenge.nonce().data());
+    auto nonceLen = hmacChallenge.nonce().length();
 
-    for(auto &c : nonceStr) {
-      nonce.push_back(static_cast<std::byte>(c));
-    }
+    std::vector<std::byte> nonce(nonceLen, std::byte(0));
+
+    std::copy(noncePtr, noncePtr + nonceLen, nonce.begin());
 
     // calculate the response
-    std::vector<std::byte> hmacData;
+    const EVP_MD *hashFunction = nullptr;
+
 
     switch(hmacChallenge.function()) {
       case HmacAuthChallenge::HashFunction::HmacAuthChallenge_HashFunction_SHA1:
-        this->doHmac(hmacData, EVP_sha1(), nonce);
+        hashFunction = EVP_sha1();
         break;
 
       case HmacAuthChallenge::HashFunction::HmacAuthChallenge_HashFunction_WHIRLPOOL:
-        this->doHmac(hmacData, EVP_whirlpool(), nonce);
+        hashFunction = EVP_whirlpool();
         break;
 
       default: {
@@ -384,6 +387,11 @@ namespace liblichtenstein::api {
         break;
       }
     }
+
+    auto hashLength = EVP_MD_size(hashFunction);
+    std::vector<std::byte> hmacData(hashLength, std::byte(0));
+
+    this->doHmac(hmacData, hashFunction, nonce);
 
     // make sure the HMAC generated data
     if(hmacData.empty()) {
@@ -493,7 +501,8 @@ namespace liblichtenstein::api {
     unsigned int digestSz = EVP_MD_size(fn);
 
     outBuffer.reserve(digestSz);
-    std::fill(outBuffer.begin(), outBuffer.begin() + digestSz, std::byte(0));
+    std::fill(outBuffer.begin(), outBuffer.begin() + (digestSz - 1),
+              std::byte(0));
 
     auto outBufPtr = outBuffer.data();
 
