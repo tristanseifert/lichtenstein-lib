@@ -2,14 +2,13 @@
 // Created by Tristan Seifert on 2019-08-31.
 //
 #include "HmacChallengeHandler.h"
-
+#include "MessageIO.h"
 #include "version.h"
 #include "MessageSerializer.h"
 #include "WireMessage.h"
 #include "ProtocolError.h"
 
 #include "proto/shared/Message.pb.h"
-
 #include "proto/shared/Error.pb.h"
 #include "proto/shared/AuthHello.pb.h"
 #include "proto/shared/AuthChallenge.pb.h"
@@ -58,32 +57,17 @@ namespace liblichtenstein::api {
    */
   HmacChallengeHandler::HmacChallengeHandler(
           std::shared_ptr<io::GenericTLSClient> client,
-          const std::string &secret, const uuids::uuid &uuid) : client(client),
-                                                                hmacSecret(
+          const std::string &secret, const uuids::uuid &uuid) : hmacSecret(
                                                                         secret),
                                                                 uuid(uuid) {
-    // assign the callbacks for client
-    this->readCallback = [this](std::vector<std::byte> &data, size_t wanted) {
-      return this->client->read(data, wanted);
-    };
-
-    this->writeCallback = [this](const std::vector<std::byte> &data) {
-      return this->client->write(data);
-    };
+    this->io = std::make_unique<MessageIO>(client);
   }
 
   HmacChallengeHandler::HmacChallengeHandler(
           std::shared_ptr<io::GenericServerClient> client,
-          const std::string &secret, const uuids::uuid &uuid) : serverClient(
-          client), hmacSecret(secret), uuid(uuid) {
-    // assign callbacks for a server connection
-    this->readCallback = [this](std::vector<std::byte> &data, size_t wanted) {
-      return this->serverClient->read(data, wanted);
-    };
-
-    this->writeCallback = [this](const std::vector<std::byte> &data) {
-      return this->serverClient->write(data);
-    };
+          const std::string &secret, const uuids::uuid &uuid) : hmacSecret(
+          secret), uuid(uuid) {
+    this->io = std::make_unique<MessageIO>(client);
   }
 
 
@@ -186,7 +170,7 @@ namespace liblichtenstein::api {
     challenge.mutable_payload()->PackFrom(hmacChallenge);
 
     // send it
-    this->sendMessage(challenge);
+    this->io->sendMessage(challenge);
   }
 
   /**
@@ -197,7 +181,7 @@ namespace liblichtenstein::api {
   void
   HmacChallengeHandler::getAuthResponse(const std::vector<std::byte> &computed,
                                         const std::vector<std::byte> &nonce) {
-    this->readMessage([this, computed, nonce](protoMessageType &message) {
+    this->io->readMessage([this, computed, nonce](protoMessageType &message) {
       std::string type = message.payload().type_url();
 
       // is it an error?
@@ -282,7 +266,7 @@ namespace liblichtenstein::api {
 
     state.set_success(true);
 
-    this->sendMessage(state);
+    this->io->sendMessage(state);
   }
 
 
@@ -313,13 +297,13 @@ namespace liblichtenstein::api {
     hello.add_supportedmethods(HmacChallengeHandler::MethodName);
 
     // send the message
-    this->sendMessage(hello);
+    this->io->sendMessage(hello);
   }
   /**
    * Waits to receive an AuthChallenge or an AuthState (error) message.
    */
   void HmacChallengeHandler::getAuthChallenge() {
-    this->readMessage([this](protoMessageType &message) {
+    this->io->readMessage([this](protoMessageType &message) {
       std::string type = message.payload().type_url();
 
       // is it an error message?
@@ -433,13 +417,13 @@ namespace liblichtenstein::api {
     response.set_allocated_payload(any);
 
     // send it
-    this->sendMessage(response);
+    this->io->sendMessage(response);
   }
   /**
    * Waits to receive an AuthState message.
    */
   void HmacChallengeHandler::getAuthState() {
-    this->readMessage([this](protoMessageType &message) {
+    this->io->readMessage([this](protoMessageType &message) {
       std::string type = message.payload().type_url();
 
       // is it an error message?
@@ -473,125 +457,6 @@ namespace liblichtenstein::api {
         throw ProtocolError(error.str().c_str());
       }
     });
-  }
-
-
-
-  /**
-   * Sends a response to a previous request.
-   *
-   * @param response Message to respond with
-   */
-  void HmacChallengeHandler::sendMessage(google::protobuf::Message &response) {
-    int written;
-
-    // serialize message
-    std::vector<std::byte> responseBytes;
-    MessageSerializer::serialize(responseBytes, response);
-
-    // send it
-    written = this->client->write(responseBytes);
-
-    if(written != responseBytes.size()) {
-      LOG(ERROR) << "Couldn't write full message! (Wrote " << written << ", "
-                 << "but total is " << responseBytes.size() << ")";
-      return;
-    }
-
-    // done, I guess
-    VLOG(1) << "Sent response: " << response.DebugString();
-  }
-
-
-  /**
-   * Given a wire format message, attempts to decode the protocol buffer that is
-   * contained within.
-   *
-   * @param outMessage Protocol message into which we deserialize
-   * @param buffer Buffer containing message bytes; all fields that require it
-   * are swapped to host byte order at this point.
-   */
-  void HmacChallengeHandler::decodeMessage(protoMessageType &outMessage,
-                                           std::vector<std::byte> &buffer) {
-    // get wire message struct
-    auto *wire = reinterpret_cast<lichtenstein_message_t *>(buffer.data());
-
-    // we should have at least as much in the vector as the payload size says
-    if(wire->length > buffer.size()) {
-      std::stringstream error;
-
-      error << "Invalid message length (wire message indicates "
-            << wire->length;
-      error << " bytes of payload, but a total of " << buffer.size();
-      error << " bytes were read from the client, including wire message)";
-
-      throw ProtocolError(error.str().c_str());
-    }
-
-    // cool, we have enough data. try to decode it
-    int realPayloadSize = std::min((size_t) wire->length, (buffer.size() -
-                                                           sizeof(lichtenstein_message_t)));
-
-    if(!outMessage.ParseFromArray(wire->payload, realPayloadSize)) {
-      throw ProtocolError("Could not decode protobuf");
-    }
-
-    // neat, the message could be decoded. validate version
-    if(outMessage.version() != lichtenstein_protocol_get_version()) {
-      std::stringstream error;
-
-      error << "Invalid protocol version (wire message is version 0x";
-      error << std::hex << outMessage.version()
-            << ", whereas the protocol lib is 0x";
-      error << std::hex << lichtenstein_protocol_get_version() << ")";
-
-      throw ProtocolError(error.str().c_str());
-    }
-  }
-
-  /**
-   * Reads a message from the client; this will either throw an exception or
-   * invoke the specified success closure.
-   *
-   * @param success Closure to run when a valid message has been received.
-   */
-  void HmacChallengeHandler::readMessage(
-          const std::function<void(protoMessageType &)> &success) {
-    std::vector<std::byte> received;
-    int read;
-
-    // read the wire header
-    const size_t wireHeaderLen = sizeof(lichtenstein_message_t);
-    read = this->client->read(received, wireHeaderLen);
-
-    if(read != wireHeaderLen) {
-      std::stringstream error;
-
-      error << "Protocol error: expected to read ";
-      error << wireHeaderLen << " bytes, got " << read;
-      error << " bytes instead!";
-
-      throw ProtocolError(error.str().c_str());
-    }
-
-    // byteswap all fields that need it
-    void *data = received.data();
-    auto *msg = reinterpret_cast<lichtenstein_message_t *>(data);
-
-    msg->length = ntohl(msg->length);
-
-    VLOG(2) << "Message contains " << msg->length << " more bytes";
-
-    // read the rest of the payload now (size checking happens during decode)
-    read = this->client->read(received, msg->length);
-    VLOG(2) << "Read " << received.size() << " total bytes from client "
-            << this->client;
-
-    lichtenstein::protocol::Message message;
-    this->decodeMessage(message, received);
-
-    // message is valid, so run callback
-    success(message);
   }
 
   /**

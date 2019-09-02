@@ -5,11 +5,12 @@
 #ifndef LIBLICHTENSTEIN_HMACCHALLENGEHANDLER_H
 #define LIBLICHTENSTEIN_HMACCHALLENGEHANDLER_H
 
+#include "MessageIO.h"
+
 #include <memory>
 #include <string>
 #include <cstddef>
 #include <vector>
-#include <functional>
 
 #include <uuid.h>
 #include <google/protobuf/message.h>
@@ -34,6 +35,8 @@ namespace liblichtenstein::io {
 }
 
 namespace liblichtenstein::api {
+  class MessageIO;
+
   /**
    * This class handles the HMAC challenge/response authentication when
    * connecting to a server.
@@ -95,31 +98,14 @@ namespace liblichtenstein::api {
       void generateRandom(std::vector<std::byte> &outBuffer, size_t bytes);
 
     private:
-      void sendMessage(google::protobuf::Message &response);
-
-      void decodeMessage(protoMessageType &outMessage,
-                         std::vector<std::byte> &buffer);
-
-      void readMessage(const std::function<void(protoMessageType &)> &success);
-
-    private:
       // UUID to send in the AuthHello
       uuids::uuid uuid;
       // secret for HMAC
       std::string hmacSecret;
 
     private:
-      // connection to the server on which we communicate
-      std::shared_ptr<io::GenericTLSClient> client;
-      // server client (for verification)
-      std::shared_ptr<io::GenericServerClient> serverClient;
-
-    private:
-      // read function
-      std::function<size_t(std::vector<std::byte> &, size_t)> readCallback;
-      // write function
-      std::function<size_t(const std::vector<std::byte> &)> writeCallback;
-
+      // we do all our message IO on this object
+      std::unique_ptr<MessageIO> io;
   };
 }
 

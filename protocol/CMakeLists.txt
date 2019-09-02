@@ -2,7 +2,7 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 
 # define the library
-add_library(lichtensteinProto STATIC version.c version.h WireMessage.h MessageSerializer.cpp MessageSerializer.h SerializationError.h GenericClientHandler.cpp GenericClientHandler.h ProtocolError.h HmacChallengeHandler.cpp HmacChallengeHandler.h)
+add_library(lichtensteinProto STATIC version.c version.h WireMessage.h MessageSerializer.cpp MessageSerializer.h SerializationError.h GenericClientHandler.cpp GenericClientHandler.h ProtocolError.h HmacChallengeHandler.cpp HmacChallengeHandler.h MessageIO.cpp MessageIO.h)
 
 # link against the protobuf library
 target_link_libraries(lichtensteinProto ${PROTOBUF_LIBRARY})
