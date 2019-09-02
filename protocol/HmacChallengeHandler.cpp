@@ -531,7 +531,7 @@ namespace liblichtenstein::api {
 
     // reserve space in the output buffer
     outBuffer.reserve(bytes);
-    std::fill(outBuffer.begin(), outBuffer.begin() + bytes, std::byte(0));
+    std::fill(outBuffer.begin(), outBuffer.begin() + (bytes - 1), std::byte(0));
 
     auto outBufPtr = reinterpret_cast<unsigned char *>(outBuffer.data());
 

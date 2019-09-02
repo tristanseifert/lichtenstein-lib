@@ -320,7 +320,7 @@ namespace liblichtenstein {
     // TODO: configure the certificate validation
 
     // validate the adoption state
-    auto token = this->dataStore->get("adoption.token");
+    auto token = this->dataStore->get("adoption.secret");
 
     if(!token.has_value()) {
       LOG(ERROR) << "Missing adoption token";

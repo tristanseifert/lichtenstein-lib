@@ -19,5 +19,5 @@ message AdoptRequest {
     uint32 rtPort = 5;
 
     // secret key generated for this node
-    string secret = 6;
+    bytes secret = 6;
 }

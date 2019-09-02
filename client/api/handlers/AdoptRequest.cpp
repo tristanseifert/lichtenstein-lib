@@ -83,7 +83,7 @@ namespace liblichtenstein::api::handler {
     store->set("rt.port", std::to_string(request.rtport()));
 
     // lastly, copy the secret
-    store->set("server.token", request.secret());
+    store->set("adoption.secret", request.secret());
 
     // then, try to do the adoption
     this->getClient()->verifyAdoption();

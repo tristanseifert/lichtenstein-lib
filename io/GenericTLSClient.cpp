@@ -157,6 +157,7 @@ namespace liblichtenstein {
         } else if (errType == SSL_ERROR_ZERO_RETURN) {
           // the SSL session has been closed, so tear it down
           this->close();
+          return 0;
         } else if (errType == SSL_ERROR_WANT_READ) {
           // no data is available on the socket for us to consume
           return 0;
