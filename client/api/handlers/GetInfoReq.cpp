@@ -121,7 +121,8 @@ namespace liblichtenstein::api::handler {
     node->set_client(client);
 
     // extract uuid
-    auto uuidBytes = this->getClient()->getNodeUuid().as_bytes();
+    auto uuid = this->getClient()->getNodeUuid();
+    auto uuidBytes = uuid.as_bytes();
     node->set_uuid(uuidBytes.data(), uuidBytes.size());
 
     return node;

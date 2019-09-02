@@ -140,17 +140,14 @@ namespace liblichtenstein {
     size_t GenericTLSClient::read(std::vector<std::byte> &data, size_t wanted) {
       int err, errType;
 
-      // create a temporary buffer
-      std::vector<std::byte> buffer;
-      buffer.reserve(wanted);
-
-      std::byte *buf = buffer.data();
-
-      // try to read
+      // allocate a temporary read buffer and read into it
+      auto buf = new std::byte[wanted];
       err = SSL_read(this->ssl, buf, wanted);
 
       if (err <= 0) {
-        // figure out what went wrong
+        // deallocate the read buffer and figure out cause of error
+        delete[] buf;
+
         errType = SSL_get_error(this->ssl, err);
 
         if (errType == SSL_ERROR_SYSCALL) {
@@ -171,7 +168,8 @@ namespace liblichtenstein {
       }
 
       // read was successful, copy the bytes and return
-      data.insert(data.end(), buffer.begin(), (buffer.begin() + err));
+      data.insert(data.end(), buf, (buf + err));
+      delete[] buf;
 
       return err;
     }

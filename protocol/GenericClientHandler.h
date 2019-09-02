@@ -5,6 +5,8 @@
 #ifndef LIBLICHTENSTEIN_GENERICCLIENTHANDLER_H
 #define LIBLICHTENSTEIN_GENERICCLIENTHANDLER_H
 
+#include "MessageIO.h"
+
 #include <memory>
 #include <functional>
 #include <atomic>
@@ -33,14 +35,15 @@ namespace liblichtenstein::api {
 
     public:
       GenericClientHandler() = delete;
-
       explicit GenericClientHandler(std::shared_ptr<clientType> client);
 
       virtual ~GenericClientHandler();
 
     public:
       /// sends a response to the client (used by handlers)
-      void sendResponse(google::protobuf::Message &response);
+      void sendResponse(google::protobuf::Message &response) {
+        this->io->sendMessage(response);
+      }
 
       /// shuts down the client
       virtual void close() {
@@ -51,14 +54,15 @@ namespace liblichtenstein::api {
       virtual void sendException(const std::exception &e) noexcept;
 
     protected:
-      void readMessage(const std::function<void(protoMessageType &)> &success);
-
-      void decodeMessage(protoMessageType &outMessage,
-                         std::vector<std::byte> &buffer);
+      void readMessage(const std::function<void(protoMessageType &)> &success) {
+        this->io->readMessage(success);
+      }
 
     protected:
       // client connection
       std::shared_ptr<clientType> client;
+      // message IO instance used
+      std::shared_ptr<MessageIO> io;
 
       // whether the client has been shut down
       std::atomic_bool shutdown = false;
