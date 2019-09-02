@@ -16,10 +16,12 @@
 #include "io/TLSClient.h"
 #include "io/OpenSSLError.h"
 
-#include "helpers/HmacChallengeHandler.h"
+#include "protocol/HmacChallengeHandler.h"
 
 using SSLError = liblichtenstein::io::OpenSSLError;
-using TLSClient = liblichtenstein::io::TLSClient;
+using liblichtenstein::io::TLSClient;
+
+using liblichtenstein::api::HmacChallengeHandler;
 
 /*
  * The client is implemented as a state machine that runs in its own thread. It
@@ -349,8 +351,7 @@ namespace liblichtenstein {
    */
   bool Client::validateAdoptionToken(const std::string &token) {
     // crate the HMAC auth handler
-    helpers::HmacChallengeHandler handler(this->serverApiClient, token,
-                                          this->nodeUuid);
+    HmacChallengeHandler handler(this->serverApiClient, token, this->nodeUuid);
 
     try {
       handler.authenticate();

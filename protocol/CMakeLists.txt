@@ -2,13 +2,16 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 
 # define the library
-add_library(lichtensteinProto STATIC version.c version.h WireMessage.h MessageSerializer.cpp MessageSerializer.h SerializationError.h GenericClientHandler.cpp GenericClientHandler.h ProtocolError.h)
+add_library(lichtensteinProto STATIC version.c version.h WireMessage.h MessageSerializer.cpp MessageSerializer.h SerializationError.h GenericClientHandler.cpp GenericClientHandler.h ProtocolError.h HmacChallengeHandler.cpp HmacChallengeHandler.h)
 
 # link against the protobuf library
 target_link_libraries(lichtensteinProto ${PROTOBUF_LIBRARY})
 include_directories(${PROTOBUF_INCLUDE_DIR})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+# include the stduuid library
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libs/stduuid/include)
 
 # link with LibreSSL
 if (APPLE)

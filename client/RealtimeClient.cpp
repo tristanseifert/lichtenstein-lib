@@ -4,7 +4,7 @@
 #include "RealtimeClient.h"
 #include "Client.h"
 #include "IClientDataStore.h"
-#include "helpers/HmacChallengeHandler.h"
+#include "protocol/HmacChallengeHandler.h"
 
 #include "io/OpenSSLError.h"
 #include "io/DTLSClient.h"
@@ -24,7 +24,7 @@
 using DTLSClient = liblichtenstein::io::DTLSClient;
 using SSLError = liblichtenstein::io::OpenSSLError;
 
-using liblichtenstein::helpers::HmacChallengeHandler;
+using liblichtenstein::api::HmacChallengeHandler;
 
 using liblichtenstein::api::MessageSerializer;
 using liblichtenstein::api::ProtocolError;

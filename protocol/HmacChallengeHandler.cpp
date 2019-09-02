@@ -3,34 +3,40 @@
 //
 #include "HmacChallengeHandler.h"
 
-#include "protocol/version.h"
-#include "protocol/MessageSerializer.h"
-#include "protocol/WireMessage.h"
-#include "protocol/ProtocolError.h"
+#include "version.h"
+#include "MessageSerializer.h"
+#include "WireMessage.h"
+#include "ProtocolError.h"
 
-#include "shared/Message.pb.h"
+#include "proto/shared/Message.pb.h"
 
-#include "shared/AuthHello.pb.h"
-#include "shared/AuthChallenge.pb.h"
-#include "shared/AuthResponse.pb.h"
-#include "shared/AuthState.pb.h"
-#include "shared/HmacAuthChallenge.pb.h"
-#include "shared/HmacAuthResponse.pb.h"
+#include "proto/shared/Error.pb.h"
+#include "proto/shared/AuthHello.pb.h"
+#include "proto/shared/AuthChallenge.pb.h"
+#include "proto/shared/AuthResponse.pb.h"
+#include "proto/shared/AuthState.pb.h"
+#include "proto/shared/HmacAuthChallenge.pb.h"
+#include "proto/shared/HmacAuthResponse.pb.h"
 
-#include "io/GenericTLSClient.h"
+#include "../io/GenericTLSClient.h"
+#include "../io/GenericServerClient.h"
+#include "../io/OpenSSLError.h"
 
 #include <glog/logging.h>
 
 #include <google/protobuf/message.h>
 
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 
 #include <algorithm>
 
 
 using liblichtenstein::api::MessageSerializer;
 using liblichtenstein::api::ProtocolError;
+using liblichtenstein::io::OpenSSLError;
 
+using lichtenstein::protocol::Error;
 using lichtenstein::protocol::AuthHello;
 using lichtenstein::protocol::AuthState;
 using lichtenstein::protocol::AuthChallenge;
@@ -39,15 +45,16 @@ using lichtenstein::protocol::AuthResponse;
 using lichtenstein::protocol::HmacAuthResponse;
 
 
-namespace liblichtenstein::helpers {
+namespace liblichtenstein::api {
   const std::string HmacChallengeHandler::MethodName = "me.tseifert.lichtenstein.auth.hmac";
 
   /**
-   * Creates a new instance of the HMAC challenge handler.
+   * Creates a new instance of the HMAC challenge handler that's works on a
+   * connected client.
    *
-   * @param client Connection to authenticate on
+   * @param client A connected TLS client to authenticate
    * @param secret HMAC secret
-   * @param uuid UUID to send in the authentication
+   * @param uuid UUID to send/expect
    */
   HmacChallengeHandler::HmacChallengeHandler(
           std::shared_ptr<io::GenericTLSClient> client,
@@ -55,11 +62,232 @@ namespace liblichtenstein::helpers {
                                                                 hmacSecret(
                                                                         secret),
                                                                 uuid(uuid) {
+    // assign the callbacks for client
+    this->readCallback = [this](std::vector<std::byte> &data, size_t wanted) {
+      return this->client->read(data, wanted);
+    };
 
+    this->writeCallback = [this](const std::vector<std::byte> &data) {
+      return this->client->write(data);
+    };
+  }
+
+  HmacChallengeHandler::HmacChallengeHandler(
+          std::shared_ptr<io::GenericServerClient> client,
+          const std::string &secret, const uuids::uuid &uuid) : serverClient(
+          client), hmacSecret(secret), uuid(uuid) {
+    // assign callbacks for a server connection
+    this->readCallback = [this](std::vector<std::byte> &data, size_t wanted) {
+      return this->serverClient->read(data, wanted);
+    };
+
+    this->writeCallback = [this](const std::vector<std::byte> &data) {
+      return this->serverClient->write(data);
+    };
+  }
+
+
+  /**
+   * Handles an authentication request in server mode, e.g. issuing the
+   * challenge and ensuring that the value we get back is the expected one.
+   *
+   * @param message Received AuthHello message
+   */
+  void HmacChallengeHandler::handleAuthentication(const AuthHello &hello) {
+    // validate the hello
+    this->verifyHello(hello);
+
+    // generate random data for the challenge and send it
+    std::vector<std::byte> nonce;
+    this->generateRandom(nonce, kNonceLength);
+
+    CHECK(nonce.size() > 0)
+                    << "Nonce cannot be empty, this should never happen";
+
+    this->sendChallenge(nonce);
+
+    // compute the HMAC (so we can verify it) (TODO: make hash fn configurable)
+    std::vector<std::byte> computedHmac;
+    this->doHmac(computedHmac, EVP_whirlpool(), nonce);
+
+    // read the challenge response, this also verifies the response
+    this->getAuthResponse(computedHmac, nonce);
+
+    // if we get here, auth was successful, so send the success message
+    this->sendAuthSuccess();
   }
 
   /**
-   * Attempts to authenticate.
+   * Verifies a received AuthHello to have the proper UUID field, and supports
+   * any of our methods. If a condition fails, an exception is generated.
+   *
+   * @param hello Received AuthHello message
+   */
+  void HmacChallengeHandler::verifyHello(const AuthHello &hello) {
+    // verify that the UUID matches
+    auto uuidData = hello.uuid().data();
+    std::array<uuids::uuid::value_type, 16> uuidArray{};
+    std::copy(uuidData, uuidData + 16, uuidArray.begin());
+
+    uuids::uuid receivedUuid(uuidArray);
+
+    if(receivedUuid != this->uuid) {
+      std::stringstream error;
+
+      error << "Received UUID: " << to_string(receivedUuid) << ", expected ";
+      error << to_string(this->uuid);
+
+      throw std::runtime_error(error.str().c_str());
+    }
+
+    // make sure that the supported methods contains the HMAC method
+    bool supported = false;
+
+    for(int i = 0; i < hello.supportedmethods_size(); i++) {
+      auto method = hello.supportedmethods(i);
+
+      if(method == MethodName) {
+        supported = true;
+        break;
+      }
+    }
+
+    if(!supported) {
+      std::stringstream error;
+
+      error << "Could not find a supported authentication method (expected ";
+      error << MethodName << ")";
+
+      throw std::runtime_error(error.str().c_str());
+    }
+  }
+
+  /**
+   * Sends a challenge to the client. Currently, we will use Whirlpool as the
+   * HMAC method regardless of any other configuration.
+   *
+   * @param nonce Generated nonce data
+   */
+  void
+  HmacChallengeHandler::sendChallenge(const std::vector<std::byte> &nonce) {
+    // fill out the wrapper challenge
+    AuthChallenge challenge;
+
+    challenge.set_method(MethodName);
+
+    // fill in the Hmac challenge message
+    HmacAuthChallenge hmacChallenge;
+
+    hmacChallenge.set_function(
+            lichtenstein::protocol::HmacAuthChallenge_HashFunction_WHIRLPOOL);
+    hmacChallenge.set_nonce(nonce.data(), nonce.size());
+
+    // insert it into the auth challenge wrapper
+    challenge.mutable_payload()->PackFrom(hmacChallenge);
+
+    // send it
+    this->sendMessage(challenge);
+  }
+
+  /**
+   * Attempts to receive an AuthResponse message.
+   *
+   * @param computed Precomputed correct HMAC
+   */
+  void
+  HmacChallengeHandler::getAuthResponse(const std::vector<std::byte> &computed,
+                                        const std::vector<std::byte> &nonce) {
+    this->readMessage([this, computed, nonce](protoMessageType &message) {
+      std::string type = message.payload().type_url();
+
+      // is it an error?
+      if(type == "type.googleapis.com/lichtenstein.protocol.Error") {
+        this->handleError(message);
+      }
+      // is it an auth response?
+      if(type == "type.googleapis.com/lichtenstein.protocol.AuthResponse") {
+        // unpack the outer message
+        AuthResponse response;
+        if(!message.payload().UnpackTo(&response)) {
+          throw std::runtime_error("Failed to unpack AuthResponse");
+        }
+
+        // then, unpack the HMAC message
+        HmacAuthResponse hmacResponse;
+        if(!response.payload().UnpackTo(&hmacResponse)) {
+          throw std::runtime_error("Failed to unpack HmacAuthResponse");
+        }
+
+        // we got the response, so check it
+        this->checkResponse(computed, nonce, hmacResponse);
+      }
+        // we received a message type we didn't expect
+      else {
+        std::stringstream error;
+        error << "Received unexpected message type '" << type << "'; expected ";
+        error << "Error or AuthResponse";
+        throw ProtocolError(error.str().c_str());
+      }
+    });
+  }
+
+  /**
+   * Validates a received HMAC challenge; this makes sure that the nonce that
+   * was sent back is identical to what we sent, and that the HMAC matches what
+   * we precomputed.
+   *
+   * @param computed Computed HMAC
+   * @param nonce Random nonce we sent
+   * @param response Received HMAC challenge
+   */
+  void
+  HmacChallengeHandler::checkResponse(const std::vector<std::byte> &computed,
+                                      const std::vector<std::byte> &nonce,
+                                      const HmacAuthResponse &response) {
+    // do the nonce bytes match?
+    auto receivedNoncePtr = reinterpret_cast<const std::byte *>(response.nonce().data());
+    auto receivedNonceLen = response.nonce().length();
+
+    std::vector<std::byte> receivedNonce;
+    receivedNonce.reserve(receivedNonceLen);
+    std::copy(receivedNoncePtr, receivedNoncePtr + receivedNonceLen,
+              receivedNonce.begin());
+
+    if(receivedNonce != nonce) {
+      throw std::runtime_error(
+              "Received nonce is not the same as what was sent");
+    }
+
+    // do the HMAC bytes match?
+    auto receivedHmacPtr = reinterpret_cast<const std::byte *>(response.hmac().data());
+    auto receivedHmacLen = response.hmac().length();
+
+    std::vector<std::byte> receivedHmac;
+    receivedHmac.reserve(receivedHmacLen);
+    std::copy(receivedHmacPtr, receivedHmacPtr + receivedHmacLen,
+              receivedHmac.begin());
+
+    if(receivedHmac != computed) {
+      throw std::runtime_error("Received HMAC is incorrect");
+    }
+
+    // if we get here, the response was correct
+  }
+
+  /**
+   * Sends the auth success message to the client
+   */
+  void HmacChallengeHandler::sendAuthSuccess() {
+    AuthState state;
+
+    state.set_success(true);
+
+    this->sendMessage(state);
+  }
+
+
+  /**
+   * Attempts to authenticate in client mode, e.g. responding to the challenge.
    */
   void HmacChallengeHandler::authenticate() {
     // first, send the AuthHello
@@ -71,7 +299,6 @@ namespace liblichtenstein::helpers {
     // lastly, wait for the status response
     this->getAuthState();
   }
-
   /**
    * Sends the "AuthHello" message.
    */
@@ -88,7 +315,6 @@ namespace liblichtenstein::helpers {
     // send the message
     this->sendMessage(hello);
   }
-
   /**
    * Waits to receive an AuthChallenge or an AuthState (error) message.
    */
@@ -97,17 +323,8 @@ namespace liblichtenstein::helpers {
       std::string type = message.payload().type_url();
 
       // is it an error message?
-      if(type == "type.googleapis.com/lichtenstein.protocol.AuthState") {
-        AuthState state;
-        if(!message.payload().UnpackTo(&state)) {
-          throw ProtocolError("Failed to unpack AuthState");
-        }
-
-        std::stringstream error;
-
-        error << "Auth error: \"" << state.errordetails() << "\"";
-
-        throw ProtocolError(error.str().c_str());
+      if(type == "type.googleapis.com/lichtenstein.protocol.Error") {
+        this->handleError(message);
       }
 
         // is it an auth challenge?
@@ -125,14 +342,13 @@ namespace liblichtenstein::helpers {
       else {
         std::stringstream error;
 
-        error << "Received unexpected message type '" << type << "'; wanted ";
-        error << "AuthState or AuthChallenge";
+        error << "Received unexpected message type '" << type << "'; expected ";
+        error << "Error or AuthChallenge";
 
         throw ProtocolError(error.str().c_str());
       }
     });
   }
-
   /**
    * Responds to a received authentication challenge.
    *
@@ -193,7 +409,6 @@ namespace liblichtenstein::helpers {
     // produce a response message
     this->sendAuthResponse(hmacData, nonce);
   }
-
   /**
    * Constructs an AuthResponse message to the server with the given HMAC and
    * nonce data.
@@ -220,7 +435,6 @@ namespace liblichtenstein::helpers {
     // send it
     this->sendMessage(response);
   }
-
   /**
    * Waits to receive an AuthState message.
    */
@@ -228,8 +442,12 @@ namespace liblichtenstein::helpers {
     this->readMessage([this](protoMessageType &message) {
       std::string type = message.payload().type_url();
 
-      // is it an auth state
-      if(type == "type.googleapis.com/lichtenstein.protocol.AuthState") {
+      // is it an error message?
+      if(type == "type.googleapis.com/lichtenstein.protocol.Error") {
+        this->handleError(message);
+      }
+        // is it an auth state
+      else if(type == "type.googleapis.com/lichtenstein.protocol.AuthState") {
         AuthState state;
         if(!message.payload().UnpackTo(&state)) {
           throw ProtocolError("Failed to unpack AuthState");
@@ -245,18 +463,18 @@ namespace liblichtenstein::helpers {
           throw ProtocolError(error.str().c_str());
         }
       }
-
         // undefined message type :(
       else {
         std::stringstream error;
 
-        error << "Received unexpected message type '" << type << "'; wanted ";
-        error << "AuthState";
+        error << "Received unexpected message type '" << type << "'; expected ";
+        error << "Error or AuthState";
 
         throw ProtocolError(error.str().c_str());
       }
     });
   }
+
 
 
   /**
@@ -376,6 +594,20 @@ namespace liblichtenstein::helpers {
     success(message);
   }
 
+  /**
+   * Handles an Error message, by converting it into an exception.
+   *
+   * @param message Received message that contains an Error as payload
+   */
+  void HmacChallengeHandler::handleError(const protoMessageType &message) {
+    Error error;
+    if(!message.payload().UnpackTo(&error)) {
+      throw ProtocolError("Failed to unpack Error");
+    }
+
+    throw ProtocolError(error.DebugString().c_str());
+  }
+
 
   /**
    * Calculates the correct HMAC response.
@@ -420,5 +652,29 @@ namespace liblichtenstein::helpers {
     // we're done, produce the result
     HMAC_Final(&ctx, reinterpret_cast<unsigned char *>(outBufPtr), &digestSz);
     HMAC_CTX_cleanup(&ctx);
+  }
+
+  /**
+   * Generates random data and writes it into the specified vector.
+   *
+   * @param outBuffer Vector to receive random data
+   * @param bytes Number of bytes to generate
+   */
+  void HmacChallengeHandler::generateRandom(std::vector<std::byte> &outBuffer,
+                                            size_t bytes) {
+    int err = 0;
+
+    // reserve space in the output buffer
+    outBuffer.reserve(bytes);
+    std::fill(outBuffer.begin(), outBuffer.begin() + bytes, std::byte(0));
+
+    auto outBufPtr = reinterpret_cast<unsigned char *>(outBuffer.data());
+
+    // generate random data
+    err = RAND_bytes(outBufPtr, bytes);
+
+    if(err != 1) {
+      throw OpenSSLError("RAND_bytes() failed");
+    }
   }
 }
