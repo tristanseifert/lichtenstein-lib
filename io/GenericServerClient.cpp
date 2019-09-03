@@ -124,6 +124,7 @@ namespace liblichtenstein::io {
       } else if (errType == SSL_ERROR_ZERO_RETURN) {
         // the SSL session has been closed, so tear it down
         this->close();
+        throw SSLSessionClosedError("Session closed by peer");
       } else {
         // it was some other OpenSSL error
         throw OpenSSLError(

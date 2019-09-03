@@ -28,6 +28,8 @@ namespace liblichtenstein::io {
 }
 
 namespace liblichtenstein::api {
+  class MessageIO;
+
   /**
    * This provides the interface to the server's realtime data API, which is
    * primarily used to receive pixel data.
@@ -49,16 +51,11 @@ namespace liblichtenstein::api {
       void threadEntry();
 
     private:
-      void sendMessage(google::protobuf::Message &response);
-
-      void decodeMessage(protoMessageType &outMessage,
-                         std::vector<std::byte> &buffer);
-
-      void readMessage(const std::function<void(protoMessageType &)> &success);
-
-    private:
       // client instance
       Client *client = nullptr;
+
+      // message IO handler
+      std::shared_ptr<MessageIO> io;
 
       // worker thread for handling the realtime protocol
       std::unique_ptr<std::thread> thread = nullptr;

@@ -57,17 +57,42 @@ namespace liblichtenstein::api {
    */
   HmacChallengeHandler::HmacChallengeHandler(
           std::shared_ptr<io::GenericTLSClient> client,
-          const std::string &secret, const uuids::uuid &uuid) : hmacSecret(
-          secret),
-                                                                uuid(uuid) {
-    this->io = std::make_unique<MessageIO>(client);
+          const std::string &secret, const uuids::uuid &uuid)
+          : HmacChallengeHandler(std::make_shared<MessageIO>(client), secret,
+                                 uuid) {
+
   }
 
+  /**
+   * Creates a new instance of the HMAC challenge handler that's works on a
+   * server client
+   *
+   * @param client A server client
+   * @param secret HMAC secret
+   * @param uuid UUID to send/expect
+   */
   HmacChallengeHandler::HmacChallengeHandler(
           std::shared_ptr<io::GenericServerClient> client,
-          const std::string &secret, const uuids::uuid &uuid) : hmacSecret(
-          secret), uuid(uuid) {
-    this->io = std::make_unique<MessageIO>(client);
+          const std::string &secret, const uuids::uuid &uuid)
+          : HmacChallengeHandler(std::make_shared<MessageIO>(client), secret,
+                                 uuid) {
+  }
+
+  /**
+   * Creates a new instance of the HMAC challenge handler that operates on a
+   * precreated message IO object.
+   *
+   * @param io Message IO handler
+   * @param secret HMAC secret
+   * @param uuid UUID to send/expect
+   */
+  HmacChallengeHandler::HmacChallengeHandler(std::shared_ptr<MessageIO> io,
+                                             const std::string &secret,
+                                             const uuids::uuid &uuid) : io(io),
+                                                                        hmacSecret(
+                                                                                secret),
+                                                                        uuid(uuid) {
+    // nothing to do here
   }
 
 

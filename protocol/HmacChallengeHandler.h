@@ -53,8 +53,10 @@ namespace liblichtenstein::api {
 
       HmacChallengeHandler(std::shared_ptr<io::GenericTLSClient> client,
                            const std::string &secret, const uuids::uuid &uuid);
-
       HmacChallengeHandler(std::shared_ptr<io::GenericServerClient> client,
+                           const std::string &secret, const uuids::uuid &uuid);
+
+      HmacChallengeHandler(std::shared_ptr<MessageIO> io,
                            const std::string &secret, const uuids::uuid &uuid);
 
     public:
@@ -105,7 +107,7 @@ namespace liblichtenstein::api {
 
     private:
       // we do all our message IO on this object
-      std::unique_ptr<MessageIO> io;
+      std::shared_ptr<MessageIO> io;
   };
 }
 

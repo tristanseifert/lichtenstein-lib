@@ -40,6 +40,8 @@ namespace liblichtenstein::api {
     public:
       void sendMessage(google::protobuf::Message &response);
 
+      void sendException(const std::exception &e) noexcept;
+
       void decodeMessage(protoMessageType &outMessage,
                          std::vector<std::byte> &buffer);
 

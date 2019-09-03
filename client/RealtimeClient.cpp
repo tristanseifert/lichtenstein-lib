@@ -13,6 +13,7 @@
 #include "protocol/MessageSerializer.h"
 #include "protocol/WireMessage.h"
 #include "protocol/ProtocolError.h"
+#include "protocol/MessageIO.h"
 
 #include "shared/Message.pb.h"
 
@@ -43,6 +44,8 @@ namespace liblichtenstein::api {
     // create the DTLS client
     try {
       this->dtlsClient = std::make_shared<DTLSClient>(host, port);
+
+      this->io = std::make_shared<MessageIO>(this->dtlsClient);
     } catch(SSLError &e) {
       LOG(ERROR) << "SSL error while creating DTLS client: " << e.what();
       throw e;
@@ -85,7 +88,7 @@ namespace liblichtenstein::api {
     // attempt to authenticate
     auto secret = this->client->dataStore->get("adoption.secret");
 
-    HmacChallengeHandler handler(this->dtlsClient, secret.value(),
+    HmacChallengeHandler handler(this->io, secret.value(),
                                  this->client->nodeUuid);
 
     try {
@@ -101,136 +104,46 @@ namespace liblichtenstein::api {
 
     // wait for a message
     while(!this->shutdown) {
-      // wait for a message
-      this->readMessage([this](protoMessageType &message) {
-
-      });
+      try {
+        // wait for a message
+        this->io->readMessage([this](protoMessageType &message) {
+          // TODO: process message
+          VLOG(1) << "Received realtime message: " << message.DebugString();
+        });
+      } catch(SSLError &e) {
+        LOG(WARNING) << "SSL error on realtime client: " << e.what();
+        goto fatalError;
+      } catch(std::system_error &e) {
+        LOG(WARNING) << "System error in realtime client: " << e.what();
+        goto fatalError;
+      }
+        // protocol errors may be recoverable
+      catch(ProtocolError &e) {
+        LOG(WARNING) << "Protocol error in realtime client: " << e.what();
+        this->io->sendException(e);
+      }
+        // runtime errors may be recoverable
+      catch(std::runtime_error &e) {
+        LOG(WARNING) << "Runtime error in realtime client: " << e.what();
+        this->io->sendException(e);
+      }
     }
 
     // clean up
+    shutdown:;
     VLOG(1) << "Realtime client shutting down";
 
     if(this->dtlsClient) {
       this->dtlsClient->close();
       this->dtlsClient = nullptr;
     }
-  }
 
+    return;
 
-  /**
-   * Sends a response to a previous request.
-   *
-   * @param response Message to respond with
-   */
-  void RealtimeClient::sendMessage(google::protobuf::Message &response) {
-    int written;
+    // handle an error that requires the client to be closed
+    fatalError:;
+    LOG(ERROR) << "Fatal error in handling realtime client";
 
-    // serialize message
-    std::vector<std::byte> responseBytes;
-    MessageSerializer::serialize(responseBytes, response);
-
-    // send it
-    written = this->dtlsClient->write(responseBytes);
-
-    if(written != responseBytes.size()) {
-      LOG(ERROR) << "Couldn't write full message! (Wrote " << written << ", "
-                 << "but total is " << responseBytes.size() << ")";
-      return;
-    }
-
-    // done, I guess
-    VLOG(1) << "Sent response: " << response.DebugString();
-  }
-
-
-  /**
-   * Given a wire format message, attempts to decode the protocol buffer that is
-   * contained within.
-   *
-   * @param outMessage Protocol message into which we deserialize
-   * @param buffer Buffer containing message bytes; all fields that require it
-   * are swapped to host byte order at this point.
-   */
-  void RealtimeClient::decodeMessage(protoMessageType &outMessage,
-                                     std::vector<std::byte> &buffer) {
-    // get wire message struct
-    auto *wire = reinterpret_cast<lichtenstein_message_t *>(buffer.data());
-
-    // we should have at least as much in the vector as the payload size says
-    if(wire->length > buffer.size()) {
-      std::stringstream error;
-
-      error << "Invalid message length (wire message indicates "
-            << wire->length;
-      error << " bytes of payload, but a total of " << buffer.size();
-      error << " bytes were read from the client, including wire message)";
-
-      throw ProtocolError(error.str().c_str());
-    }
-
-    // cool, we have enough data. try to decode it
-    int realPayloadSize = std::min((size_t) wire->length, (buffer.size() -
-                                                           sizeof(lichtenstein_message_t)));
-
-    if(!outMessage.ParseFromArray(wire->payload, realPayloadSize)) {
-      throw ProtocolError("Could not decode protobuf");
-    }
-
-    // neat, the message could be decoded. validate version
-    if(outMessage.version() != lichtenstein_protocol_get_version()) {
-      std::stringstream error;
-
-      error << "Invalid protocol version (wire message is version 0x";
-      error << std::hex << outMessage.version()
-            << ", whereas the protocol lib is 0x";
-      error << std::hex << lichtenstein_protocol_get_version() << ")";
-
-      throw ProtocolError(error.str().c_str());
-    }
-  }
-
-  /**
-   * Reads a message from the client; this will either throw an exception or
-   * invoke the specified success closure.
-   *
-   * @param success Closure to run when a valid message has been received.
-   */
-  void RealtimeClient::readMessage(
-          const std::function<void(protoMessageType &)> &success) {
-    std::vector<std::byte> received;
-    int read;
-
-    // read the wire header
-    const size_t wireHeaderLen = sizeof(lichtenstein_message_t);
-    read = this->dtlsClient->read(received, wireHeaderLen);
-
-    if(read != wireHeaderLen) {
-      std::stringstream error;
-
-      error << "Protocol error: expected to read ";
-      error << wireHeaderLen << " bytes, got " << read;
-      error << " bytes instead!";
-
-      throw ProtocolError(error.str().c_str());
-    }
-
-    // byteswap all fields that need it
-    void *data = received.data();
-    auto *msg = reinterpret_cast<lichtenstein_message_t *>(data);
-
-    msg->length = ntohl(msg->length);
-
-    VLOG(2) << "Message contains " << msg->length << " more bytes";
-
-    // read the rest of the payload now (size checking happens during decode)
-    read = this->dtlsClient->read(received, msg->length);
-    VLOG(2) << "Read " << received.size() << " total bytes from client "
-            << this->client;
-
-    lichtenstein::protocol::Message message;
-    this->decodeMessage(message, received);
-
-    // message is valid, so run callback
-    success(message);
+    goto shutdown;
   }
 }

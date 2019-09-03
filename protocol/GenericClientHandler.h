@@ -40,6 +40,11 @@ namespace liblichtenstein::api {
       virtual ~GenericClientHandler();
 
     public:
+      /// returns the client pointer
+      std::shared_ptr<clientType> getClient() {
+        return this->client;
+      }
+
       /// sends a response to the client (used by handlers)
       void sendResponse(google::protobuf::Message &response) {
         this->io->sendMessage(response);
@@ -51,7 +56,9 @@ namespace liblichtenstein::api {
       }
 
       /// processes a generic exception into an error message
-      virtual void sendException(const std::exception &e) noexcept;
+      virtual void sendException(const std::exception &e) noexcept {
+        this->io->sendException(e);
+      }
 
     protected:
       void readMessage(const std::function<void(protoMessageType &)> &success) {

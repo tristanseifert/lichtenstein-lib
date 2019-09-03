@@ -4,6 +4,7 @@
 
 #include "GenericTLSClient.h"
 #include "OpenSSLError.h"
+#include "SSLSessionClosedError.h"
 
 #include <glog/logging.h>
 
@@ -119,6 +120,7 @@ namespace liblichtenstein {
         } else if (errType == SSL_ERROR_ZERO_RETURN) {
           // the SSL session has been closed, so tear it down
           this->close();
+          throw SSLSessionClosedError("Session closed by peer");
         } else {
           // it was some other OpenSSL error
           throw OpenSSLError("SSL_write() failed");
@@ -157,7 +159,7 @@ namespace liblichtenstein {
         } else if (errType == SSL_ERROR_ZERO_RETURN) {
           // the SSL session has been closed, so tear it down
           this->close();
-          return 0;
+          throw SSLSessionClosedError("Session closed by peer");
         } else if (errType == SSL_ERROR_WANT_READ) {
           // no data is available on the socket for us to consume
           return 0;

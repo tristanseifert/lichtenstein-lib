@@ -23,6 +23,8 @@ using liblichtenstein::api::MessageSerializer;
 using liblichtenstein::api::ProtocolError;
 using liblichtenstein::io::OpenSSLError;
 
+using lichtenstein::protocol::Error;
+
 
 namespace liblichtenstein::api {
   /**
@@ -80,6 +82,27 @@ namespace liblichtenstein::api {
 
     // done, I guess
     VLOG(1) << "Sent response: " << response.DebugString();
+  }
+
+  /**
+   * Packages the provided C++ exception and sends it as an Error message over
+   * the connection. Any errors that happen while sending the exception are
+   * silently ignored.
+   *
+   * @param e Exception to send
+   */
+  void MessageIO::sendException(const std::exception &e) noexcept {
+    // create error message
+    Error err;
+
+    err.set_description(e.what());
+
+    // send it
+    try {
+      this->sendMessage(err);
+    } catch(std::exception &e) {
+      LOG(WARNING) << "Failed to send error alert: " << e.what();
+    }
   }
 
 
@@ -143,6 +166,8 @@ namespace liblichtenstein::api {
     // read the wire header
     const size_t wireHeaderLen = sizeof(lichtenstein_message_t);
     read = this->readCallback(received, wireHeaderLen);
+
+    if(read == 0) return;
 
     if(read != wireHeaderLen) {
       std::stringstream error;
